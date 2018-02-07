@@ -183,7 +183,7 @@ MIMI_IO* mimi_open(
 |7|MIMI_AUDIO_FORMAT format|送信時の音声圧縮の有無と圧縮率を指定する。詳細は下記。|
 |8|int samplingrate|送信音声のサンプリングレートを指定する[Hz]|
 |9|int channels|送信音声のチャネル数を指定する|
-|10|MIMIIO_HTTP_REQUEST_HEADER* extra_request_headers|mimi(R) WebSocket API Service 実行時設定を指定する|
+|10|MIMIIO_HTTP_REQUEST_HEADER* extra_request_headers|mimi(R) WebSocket API Service 実行時設定を指定する。不要な場合は nullptr を指定する|
 |11|int custom_request_headers_len|上記の長さ|
 |12|const char* access_token|アクセストークンを指定する|
 |13|int loglevel|libmimiio がシステムログに出力するログレベルを指定する|
@@ -218,7 +218,99 @@ typedef struct{
 } MIMIIO_HTTP_REQUEST_HEADER;
 ``````````
 
-HTTP ヘッダーのキーと値をまとめた構造体であり、mimi(R) WebSocket API Service に指定された実行時設定を与えることができます。
+HTTP リクエストヘッダーのキーと値をまとめた構造体であり、mimi(R) WebSocket API Service に指定された実行時設定を与えることができます。ここで定義した HTTP リクエストヘッダは、libmimiio が WebSocket 接続を Upgrade する際に、RFC2822 に従った key:value\r\n の形式で同時に与えられます。
+
+#### 2.2 接続の終了
+
+`mimi_close()` を呼び出すことで、接続を終了することができます。`mimi_close()` は、`mimi_open()` が成功した後は、任意のタイミングで呼び出すことができます。`mimi_close()` は、RFC6455 に従って WebSocket 接続が終了し、関連するリソースがすべて適切に解放されるまでブロックされます。
+
+### 3. 音声送信の開始と終了の監視
+
+#### 3.1. 音声送信の開始
+
+`mimi_start()` を呼び出すことで、WebSocket 接続の確立が試行され、双方向の通信ストリームにょる音声送信及び結果受信が開始されます。ユーザー定義コールバック関数は、`mimi_start()` が成功した後に、はじめて定期的に呼び出されることになります。`mimi_start()` は成功した場合にゼロを返し、失敗した場合にはエラーコードを返します。
+
+``````````.cpp
+int errorno = mimi_start(mio);
+if(errorno != 0){
+    fprintf(stderr, "Could not start mimi(R) service. mimi_start() filed: %s (%d)", mimi_strerror(errorno), errorno);
+    mimi_close(mio);
+    return 1;
+}
+``````````
+
+#### 3.2. 音声送信終了の監視
+
+音声送信及び結果受信は、以下の場合に終了します。
+
+- 音声送信用コールバック関数の第三引数 `recog_break` に true が設定された場合（通常の「発話終了」扱い）
+- ユーザー定義コールバック関数の、`txfunc_error`, `rxfunc_error` にゼロ以外の値が設定された場合（ユーザー定義エラーの発生）
+- ユーザーが明示的に `mimi_close()` を呼んだ場合（明示的な強制終了）
+- その他 libmimiio の内部エラーによって、通信を継続できなかった場合（内部エラー）
+
+ユーザーは、`mimi_start()` が成功した後には、通信ストリームが有効であるかどうかをチェックしながら、通信の終了を待つループによって、libmimiio を初期化したスレッドをブロックするようにします。通信ストリームが有効であるかを確認するためには `mimi_is_actie()` を使います。`mimi_is_active()` が false を返した場合、送受信ともに通信は終了しています。
+
+``````````.cpp
+while(mimi_is_active(mio)){
+    usleep(100000); //Wait 0.1 sec to avoid busy loop
+}
+errorno = mimi_error(mio);
+if(errorno != 0){
+    fprintf(stderr, "An error occurred while communicating mimi(R) service: %s (%d)", mimi_strerror(errorno), errorno);
+    mimi_close(mio);
+    return 1;
+}
+``````````
+
+より詳細には、送信担当スレッド、受信担当スレッドの、両方のスレッドがどちらも実行終了状態にあるときにはじめて、`mimi_is_active()` は false を返します。送信のみ、受信のみが終了している状態の場合は、`mimi_is_active()` は true を返すことに留意してください。ストリームの詳細な状態を知りたい場合は、`mimi_stream_state()` を用いることができます。
+
+### 4. ユーティリティ関数
+
+#### バージョン情報
+
+`mimi_version()` によって、libmimiio のバージョン情報を示す可読文字列を得ることができます。
+
+``````````.cpp
+const char* mimi_version();
+// ex. 2.1.0
+``````````
+
+#### ストリームステート取得
+
+`mimi_stream_state()` によって、libmimiio のリモートホストへの接続状態を得ることができます。接続状態は mimiio.h で定義された MIMIIO_STREAM_STATE 型であり、5 種類あります。それぞれ、双方向ストリーム準備完了（WAIT）、双方向ストリーム終了状態（CLOSED）、双方向ストリーム確立状態（BOTH）、送信ストリームのみ有効（SEND）、受信ストリームのみ有効（RECV）です。
+
+###### MIMIIO_STREAM_STATE
+
+``````````.cpp
+typedef enum{
+	MIMIIO_STREAM_WAIT,   //!< Stream is not started.
+	MIMIIO_STREAM_CLOSED, //!< Stream is closed.
+	MIMIIO_STREAM_BOTH,   //!< Stream is fully-duplexed (both sending and receiving streams are active)
+	MIMIIO_STREAM_SEND,   //!< Only sending stream is active.
+	MIMIIO_STREAM_RECV,   //!< Only receiving stream is active.
+} MIMIIO_STREAM_STATE;
+``````````
+
+#### エラーコード可読化
+
+`mimi_strerror()` によって libmimiio の内部エラーコードを可読文字列にすることができます。負の値が指定された場合、一律ユーザー定義エラーという文字列を返します。リモートホスト側のエラーコードは素通しされ、libmimiio によって可読文字列化することはできません。
+
+``````````.cpp
+const char* mimi_strerror(int);
+// ex. network error
+``````````
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
