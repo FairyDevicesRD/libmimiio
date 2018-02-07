@@ -56,5 +56,8 @@ $ sudo make install
 
 #### Windows
 
-mingw, cigwin 等を利用し、Linux に準じて適宜ビルドしてください。
+mingw, cygwin 等を利用し、Linux に準じて適宜ビルドしてください。
 
+## 本ライブラリを用いた実装例
+
+[examples/](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples) 以下を参照してください。
