@@ -46,7 +46,7 @@ $ sudo make install
 ``````````
 - Apple LLVM version 8.1.0 (clang-802.0.42) 以上を推奨します。
 
-### Windows
+#### Windows
 
 mingw, cigwin 等を利用し、Linux に準じて適宜ビルドしてください。
 
