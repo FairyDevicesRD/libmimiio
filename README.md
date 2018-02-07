@@ -82,7 +82,7 @@ libmimiio は、コールバック型 API を備え、開発者は２つのコ�
 
 #### 1.1. 送信用音声を準備するコールバック関数 `txfunc`
 
-このコールバック関数は、libmimiio から定期的に呼ばれ、libmimiio に対して、音声データを与えるために用いられます。
+このコールバック関数は、libmimiio から定期的に呼ばれ、libmimiio に対して、音声データを与えるために用いられます。与えられた音声データは、libmimiio によって、ひとつの WebSocket バイナリフレームとして、サーバーに送信されます。
 
 ##### 宣言
 
@@ -97,8 +97,53 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int *txfunc_error, voi
 |1|char* buffer |サーバーに送信したい音声データを指定する。データ形式は `mimi_open()` 関数で指定し、最大データ長は 32 kbyte 以内であること|
 |2|size_t* len|上記音声データの長さを指定する|
 |3|bool* recog_break|音声送信を終了する場合に true を指定する|
-|4|int* txfunc_error|コールバック関数内での致命的エラーによって通信路を切断したい時に、ユーザー定義エラーコードを指定する。|
+|4|int* txfunc_error|コールバック関数内での致命的エラーによって通信路を切断したい時に、ユーザー定義エラーコードを指定する。libmimiio の内部エラーコードはすべて正の値であるので、重複を避けるために、ユーザー定義エラーコードは負の値であることが好ましい|
 |5|void* user_data|任意の型のユーザー定義データ|
+
+##### 実装例
+
+``````````.cpp
+void txfunc(char *buffer, size_t *len, bool *recog_break, int *txfunc_error, void *userdata)
+{
+    size_t chunk_size = 2048; 
+    *len = fread(buffer, 1, chunk_size, inputfile_); // 音声ファイルを入力とし chunk_size ずつサーバーに送信します
+    if (*len < chunk_size) { // 音声ファイルを読み終わった時点で、送信の終了を宣言します
+        *recog_break = true;
+    }
+}
+``````````
+
+この例は、仮に音声ファイルを入力と見立てて、音声ファイルをある短いサイズごとにサーバーに送信する実装例です。ファイルを読み終わった時点で、`recog_break` を true として音声送信の終了を宣言しています。
+
+#### 1.2 結果受信用コールバック関数 `rxfunc`
+
+##### 宣言
+
+``````````.cpp
+void rxfunc(const char *result, size_t len, int *rxfunc_error, void *userdata)
+``````````
+
+##### 引数
+
+|#|引数|説明|
+|---|---|---|
+|1|const char* result|サーバーからの応答結果|
+|2|size_t len|上記の長さ|
+|3|int* rxfunc_error|コールバック関数内での致命的エラーによって通信路を切断したい時に、ユーザー定義エラーコードを指定する。libmimiio の内部エラーコードはすべて正の値であるので、重複を避けるために、ユーザー定義エラーコードは負の値であることが好ましい|
+|4|void* user_data|任意の型のユーザー定義データ|
+
+##### 実装例
+
+``````````.cpp
+void rxfunc(const char *result, size_t len, int *rxfunc_error, void *userdata)
+{
+	std::string s(result, len);
+	std::cout << s << std::endl;
+}
+``````````
+
+この例では、サーバーからの応答結果を画面に表示しています。
+
 
 
 
