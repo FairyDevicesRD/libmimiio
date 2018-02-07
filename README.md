@@ -6,7 +6,7 @@ libmimiio - mimi(R) WebSocket API Service client library
 
 ## 概要
 
-WebSocket (RFC6455) 通信を利用した mimi(R) WebSocket API Service を簡単に利用するためのライブラリです。 mimi(R) との通信仕様は公開されていますので、必ずしも本ライブラリを利用する必要はありません。本ライブラリは、C++11 で実装されています。
+WebSocket (RFC6455) 通信を利用した mimi(R) WebSocket API Service を簡単に利用するためのライブラリです。 mimi(R) との通信仕様は公開されていますので、必ずしも本ライブラリを利用する必要はありません。本ライブラリ自体は C++11 で実装されていますが、ライブラリの外部 API は C の API を提供しています。
 
 ## 構築
 
