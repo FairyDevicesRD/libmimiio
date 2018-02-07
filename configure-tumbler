@@ -1,0 +1,1 @@
+CFLAGS="-O3 -DNDEBUG -Wall -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mtune=cortex-a53 -mvectorize-with-neon-quad -munaligned-access -mhard-float -ffast-math -fopenmp" CXXFLAGS="-g -O3 -mcpu=cortex-a53 -mfpu=neon-fp-armv8 -mtune=cortex-a53 -mvectorize-with-neon-quad -munaligned-access -mhard-float -ffast-math -fopenmp" ./configure

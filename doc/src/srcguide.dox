@@ -1,0 +1,17 @@
+/**
+ @defgroup examples_src Example programs demonstrating libmimiio usage
+ @brief Example programs demonstrating libmimiio usage. 
+ */
+
+/**
+ @defgroup public_header Public API definitions for users of libmimiio
+ @brief Public API definitions for users of libmimiio
+ */
+
+/**
+ @internal
+ @page srcguide A guide to the libmimiio sources
+
+ - \ref public_header
+ - \ref examples_src
+ */
