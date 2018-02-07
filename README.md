@@ -35,6 +35,15 @@ $ sudo make install
 ``````````
 - gcc 5 以上を推奨します。
 
+#### Fairy I/O Tumbler
+
+``````````.sh
+$ autoreconf -vif
+$ ./configure-tumbler
+$ make
+$ sudo make install
+``````````
+
 #### Mac OS X
 
 ``````````.sh
