@@ -15,7 +15,6 @@ WebSocket (RFC6455) 通信を利用した mimi(R) WebSocket API Service を簡�
 #### 必須
 
 - Poco C++ libraries 1.8.1 以上
-- libflac 1.3.0 以上
 - libflac++ 1.3.0 以上
 
 #### オプション
