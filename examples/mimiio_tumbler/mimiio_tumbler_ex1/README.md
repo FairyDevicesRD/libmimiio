@@ -50,13 +50,31 @@ Acceptable audio formats:
 
 ##### 便利な使い方
 
-出力の JSON 形式を見やすく表示するためには jq コマンドが便利です。 一例として、
+出力の JSON 形式を見やすく表示するための pretty print 用のスクリプト [pretty_print.py](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/pretty_print.py) を用意しました。以下のように出力をパイプすることで
 
 ``````````.bash
-./mimiio_tumbler_ex1 --host=.... | jq ".response[].result"
+./mimiio_tumbler_ex1 --host=.... --verbose | ../../pretty_print.py
+
+XFE recording stream is successfully initialized.
+XFE recording stream is successfully started.
+[[ YOU CAN SPEAK NOW ]]
+mimi connection is successfully opened.
+mimi connection is successfully started, decoding starts...
+歯が
+吾輩
+吾輩は
+吾輩はね
+吾輩は猫
+吾輩は猫で
+吾輩は猫である
+^C
+Waiting for fixed result...
+吾輩は猫である
+Stream is to be finished.
+All resources are cleaned up.
 ``````````
 
-のようにすることで、音声認識結果だけを見ることができるようになります。
+サンプルプログラムの `--verbose` 出力（標準エラー出力）はそのままに、mimi API Service の JSON 形式（標準出力）を逐次的に pretty print します。
 
 ## 主要部解説
 
