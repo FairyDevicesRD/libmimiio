@@ -234,6 +234,7 @@ int main(int argc, char** argv)
 		 rec.start();
 		 if (p.exist("verbose")) {
 			 std::cerr << "XFE recording stream is successfully started." << std::endl;
+			 std::cerr << "[[ YOU CAN SPEAK NOW ]]" << std::endl;
 		 }
 
 		 // Prepare mimi runtime configuration
@@ -263,8 +264,7 @@ int main(int argc, char** argv)
 			 return 3;
 		 }
 		 if (p.exist("verbose")) {
-			 std::cerr << "mimi connection is successfully started." << std::endl;
-			 std::cerr << "Ready..." << std::endl;
+			 std::cerr << "mimi connection is successfully started, decoding starts..." << std::endl;
 		 }
 
 		 int usec = 100000; // 0.1sec, you should choose appropriate value

@@ -66,16 +66,16 @@ void mimiioRxWorker::run()
 			}else if(opc == mimiioImpl::CLOSE_FRAME){
 				if(n == 0){
 					errorno_ = 904;
-					logger_.warning("lmio: rxWorker1: %s (%d)", mimiio::strerror(errorno_), errorno_);
+					logger_.warning("lmio: rxWorker(n=0): %s (%d)", mimiio::strerror(errorno_), errorno_);
 					break; //break rx loop
 				}else{
 					if(closeStatus == 1000){
-						poco_debug(logger_, "lmio: rxWorker2: Close frame received by remote host with code 1000, finish rxWorker normally.");
+						poco_debug(logger_, "lmio: rxWorker: Close frame received by remote host with code 1000, finish rxWorker normally.");
 						break; //break rx loop
 					}else{
 						//pass through server side's error code.
 						errorno_ = static_cast<int>(closeStatus);
-						logger_.warning("lmio: rxWorker3: %s (%d), terminate rxWorker.", mimiio::strerror(errorno_), errorno_);
+						logger_.warning("lmio: rxWorker(n!=0): %s (%d), terminate rxWorker.", mimiio::strerror(errorno_), errorno_);
 						break; //break rx loop
 					}
 				}

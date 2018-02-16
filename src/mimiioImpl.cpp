@@ -176,7 +176,7 @@ int mimiioImpl::receive_frame(std::vector<char> &buffer, OPF_TYPE& opframe, shor
 	//Must be patched the malfunction otherwise this function cause incomplete frame received exception.
 	int flags = 0;
 	//int n = ws_->receiveFrame(&buffer[0], buffer.size(), flags);	
-	Poco::Buffer<char> tmpbuffer(256);
+	Poco::Buffer<char> tmpbuffer(0);
 	tmpbuffer.clear();
 	int n = ws_->receiveFrame(tmpbuffer, flags);
 	buffer.clear();
