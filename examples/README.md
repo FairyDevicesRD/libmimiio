@@ -20,7 +20,7 @@ libmimiio をビルドすると、サンプルプログラムも同時にビル�
 
 クライアント側システムに搭載されたマイクロフォンを入力として、録音された音声をリアルタイムでサーバーに送信し、リアルタイムでサーバーから認識結果を受信する最も単純なサンプルプログラムです。マイク入力場合、リアルタイム処理が重要であるので、libmimiio による WebSocket 通信（mimi WebSocket API Service）を利用することが好適です。
 
-マイクからの録音は [portaudio（外部サイト）](http://www.portaudio.com/) を利用しています。ビルド環境に portaudio が無い場合、本サンプルプログラムはビルドされません。また、portaudio  が対応していない OS やハードウェア環境においては、本サンプルプログラムは利用できません。Fairy I/O Tumbler 上では portaudio を利用することはできません。
+マイクからの録音は [portaudio（外部サイト）](http://www.portaudio.com/) を利用しています。ビルド環境に portaudio が無い場合、本サンプルプログラムはビルドされません。また、portaudio  が対応していない OS やハードウェア環境においては、本サンプルプログラムは利用できません。Fairy I/O Tumbler 上では portaudio を利用した録音をすることはできません。
 
 ### mimiio_tumbler
 
