@@ -1,6 +1,8 @@
 # mimiio_tumbler_ex1
 
-## 概要
+## はじめに
+
+### 概要
 
 Fairy I/O Tumbler T-01 上で、libmimixfe と組み合わせ（機能制限有）、録音及び信号処理された音声を入力として、リアルタイムでリモートホストに送信し、リアルタイムでリモートホストから認識結果を受信する最もシンプルなサンプルプログラムです。サンプルプログラムの単純化のために、機能制限として、libmimixfe の設定上、同時検出する音源数が 1 の場合のみに対応し、同時複数音源を抽出する設定になっている場合には利用することができません。
 
@@ -8,7 +10,7 @@ Fairy I/O Tumbler T-01 上で、libmimixfe と組み合わせ（機能制限有�
 
 本サンプルプログラムと同一の機能を実現するために、他の設計を取ることも可能です。この設計は、デモンストレーションのためにシンプル化した設計となっていることに留意してください。
 
-## 動作フロー
+### 全体動作フロー
 
 - プログラムが開始される
 - コマンドライン引数を解析する
@@ -17,6 +19,34 @@ Fairy I/O Tumbler T-01 上で、libmimixfe と組み合わせ（機能制限有�
 - 各種コールバック関数によって、録音及び信号処理された音声が、適切にリモートホストに送信され、結果が受信される。
 - Ctrl+C の入力により、最終結果を得るための命令がリモートホストに送信される
 - 最終結果が受信され、全体が終了する
+
+### コマンドライン引数
+
+``````````.sh
+usage: ./mimiio_tumbler_ex1 --host=string --port=int [options] ...
+options:
+  -h, --host       Host name (string)
+  -p, --port       Port (int)
+  -t, --token      Access token (string [=])
+      --rate       Sampling rate (int [=16000])
+      --channel    Number of channels (int [=1])
+      --format     Audio format (string [=MIMIIO_RAW_PCM])
+      --verbose    Verbose mode
+      --help       Show help
+
+Acceptable audio formats:
+    MIMIIO_RAW_PCM
+    MIMIIO_FLAC_0
+    MIMIIO_FLAC_1
+    MIMIIO_FLAC_2
+    MIMIIO_FLAC_3
+    MIMIIO_FLAC_4
+    MIMIIO_FLAC_5
+    MIMIIO_FLAC_6
+    MIMIIO_FLAC_7
+    MIMIIO_FLAC_8
+    MIMIIO_FLAC_PASS_THROUGH
+``````````
 
 ## 主要部解説
 
@@ -105,7 +135,7 @@ if (p.exist("verbose")) {
 
 この時点で、`mimi_open()` 関数の引数に与えた音声送信コールバック関数と結果受信コールバック関数が libmimiio によって呼び出され始めることに留意してください。以上で、録音・信号処理・通信ストリーム確立・データ送信・結果受信について定常的に実行されている実行状態に入ります。
 
-#### メインスレッドの監視待機
+### メインスレッドの監視待機
 
 ``````````.cpp
 int usec = 100000; // 0.1sec, you should choose appropriate value
@@ -139,7 +169,113 @@ while(mimi_is_active(mio)){
 
 によって、リモートホストから最終結果が戻され、接続が終了するまで待つということが実現されます。以上が `main()` 関数の主要部となります。
 
-### 録音コールバック関数の実装
+### libmimixfe 録音コールバック関数の実装
+
+``````````.cpp
+void recorderCallback(
+		short* buffer,
+		size_t buflen,
+		mimixfe::SpeechState state,
+		int sourceId,
+		mimixfe::StreamInfo* info,
+		size_t infolen,
+		void* userdata
+){
+	SampleQueue* queue = reinterpret_cast<SampleQueue*>(userdata);
+	for(size_t i=0;i<buflen;++i){
+		queue->push(buffer[i]);
+	}
+}
+``````````
+
+libmimixfe 録音コールバック関数の詳細は、libmimixfe のドキュメントを参照してください。ここでは、ユーザー定義データとして渡される `userdata*` から `SampleQueue*` を取り出して、libmimixfe の出力音声データを `SampleQueue` に逐次 push しているだけとなります。
+
+ここで `SampleQueue` の実態は、 [../../include/BlockingQueue.h](https://github.com/FairyDevicesRD/libmimiio/blob/master/examples/include/BlockingQueue.h) に定義されている、
+
+``````````.cpp
+/**
+ * \~english Blocking queue with the short type of element.
+ * \~japanese Short 型のサンプルを要素に持つブロッキングキューの型エイリアス
+ */
+using SampleQueue = BlockingQueue<short>;
+``````````
+
+です。つまり、要素がひとつの short 型の値であるブロッキングキューです。ブロッキングキューはデータを push して詰め込み、pop して取り出すことができるデータ構造であり、複数のサンプルプログラムで共通に利用されています。
+
+### libmimiio 音声送信コールバック関数の実装
+
+``````````.cpp
+void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, void* userdata)
+{
+	if(interrupt_flag_ != 0){
+		*recog_break = true;
+		return;
+	}
+
+	std::chrono::milliseconds timeout(1000); // queue timeout
+	SampleQueue* queue = static_cast<SampleQueue*>(userdata);
+	auto current_queue_size = queue->size();
+	int length = 0;
+	std::vector<short> tmp;
+	for(auto i=0;i<current_queue_size;i+=2){
+		short sample = 0;
+		if(queue->pop(sample, timeout)){
+			tmp.push_back(sample);
+		    	length += 2;
+		}else{
+			*txfunc_error = -100; // Timeout for pop from queue.
+			break;
+		}
+	}
+	*len = length;
+	std::memcpy(buffer, &tmp[0], tmp.size()*2);
+}
+
+``````````
+
+libmimiio で送信用音声を準備するためのコールバック関数で、libmimiio から定期的に呼ばれます。ここでも `recorderCallback` と同様に、ユーザー定義データである `userdata*` から `SampleQueue*` を取り出しています。この `SampleQueue` から `recorderCallback` によって詰め込まれた音声データを取り出して、送信用データとしています。
+
+`SampleQueue` から pop する回数として、このコールバック関数が呼ばれた時点でのキューサイズを利用しています。キューサイズ以上の回数を pop していないので、この pop では待ち時間は発生しないことが想定されます。このため、pop のタイムアウトは想定外の異常系に対応する目的で短く設定しています。またキューサイズがゼロだった場合には、このコールバック関数の実装では何も起こりません、いわば「空回り」することになります。空回りしたとしても、libmimiio 側で適切に制御されているため問題はありません。
+
+`pop()` がタイムアウトしたときは、ユーザー定義エラーを発生させ、libmimiio に接続を切断するように要求します。`txfunc_error` に 0 以外の値が設定された場合に、libmimiio はユーザー定義エラーが発生したと認識し、接続の切断を試みます。ここでは、-100 を設定しています。libmimiio が持つ既定のエラーコードはすべて正の値であるため、ユーザー定義エラーコードは、負の値とすることを推奨しています。
+
+libmimiio に与える送信用データは char* 型であり、`sizeof(short)` は 2 であることから、ひとつの short 型サンプルを与えた時に、`len` を +2 ずつ増やしていることに留意してください。
+
+ここで、別の設計案として、`SampleQueue` から pop する回数を固定値にするという設計案があります。その場合、キューサイズ以上の回数を pop しようとするため、pop で待ち時間が発生します。その代わり、送信データチャンクサイズが毎回一定化できることと、pop で適切にブロックされるため、このコールバック関数が空回りすることを避けることができます。mimi API Service では、送信データチャンクサイズを毎回一定化することに速度・性能上のメリットはほぼありません（リモートホスト側で適切にバッファリングされています）。また、コールバック関数が空回りすることのデメリットもありませんので、pop する回数を固定値にすることのメリットはほぼありません。何らかの理由で、固定値にしなければならないとき、キューがブロックしている状態を解除するためには、キューに何らかのマジックナンバーを与えてやる（例えば、0）必要があることと、pop での待ち時間を、プログラムの全動作フローを鑑みて最長の値としなければならないことに留意してください。
+
+最後に、コールバック関数の実装の冒頭
+
+``````````.cpp
+if(interrupt_flag_ != 0){
+	*recog_break = true;
+	return;
+}
+``````````
+
+において、ユーザーが Ctrl+C を入力したときの動作を実装しています。ユーザーが Ctrl+C を入力した場合、`interrupt_flag_` が 0 以外の値になるため、その場合、`recog_break` を true とすることで、発話が終了したことをリモートホストに通知します。これにより、libmimiio は二度とこのコールバック関数を呼び出すことはなくなり、音声送信は終了したとされます。
+
+リモートホストは recog-break 命令を受け付けた場合、これまでに受け取った音声データが全部であるとした最終認識結果を `recog-finished` ステートで返すことになります。この最終認識結果の計算には若干の時間を要します。
+
+### libmimiio 結果受信コールバック関数の実装
+
+``````````.cpp
+void rxfunc(const char* result, size_t len, int* rxfunc_error, void *userdata)
+{
+	std::string s(result, len);
+	std::cout << s << std::endl;
+}
+``````````
+
+受け取った結果をそのまま画面に表示しています。
+
+
+
+
+
+
+
+
+
 
 
 
