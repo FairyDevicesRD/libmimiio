@@ -52,7 +52,7 @@ Acceptable audio formats:
 
 出力の JSON 形式を見やすく表示するための pretty print 用のスクリプト [pretty_print.py](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/pretty_print.py) を用意しました。以下のように出力をパイプすることで
 
-``````````.bash
+``````````.sh
 ./mimiio_tumbler_ex1 --host=.... --verbose | ../../pretty_print.py
 
 XFE recording stream is successfully initialized.
@@ -80,7 +80,7 @@ All resources are cleaned up.
 
 ### libmimixfe による XFERecorder の初期化と録音の開始
 
-``````````.cpp
+``````````.sh
 int xfe_errorno = 0;
 mimixfe::XFESourceConfig s;
 mimixfe::XFEECConfig e;
