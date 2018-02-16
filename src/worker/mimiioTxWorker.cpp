@@ -97,7 +97,7 @@ void mimiioTxWorker::run()
 					poco_debug(logger_, "lmio: txWorker: sent recog-break, finish txWorker normally.");
 					break;
 				}
-				Poco::Thread::sleep(1); // avoid busy loop with short time pause only when length is 0
+				Poco::Thread::sleep(100); // avoid busy loop with short time pause only when length is 0
 				continue; //do nothing
 			}
 

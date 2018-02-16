@@ -1,13 +1,33 @@
-/**
- * @file mimiio_pa.cpp
+/*
+ * @file mimiio_pa.cp
  * @ingroup examples_src
  * \~english
- * @brief Simple example of sending audio from microphone with portaudio
- * \-japanese
- * @brief portaudio を利用したマイク入力から音声データをサーバーに送信する例
+ * @brief Simple example of progressive sending audio from microphone with portaudio
+ * \~japanese
+ * @brief portaudio を利用した連続マイク入力から音声データをサーバーにリアルタイムで送信する例
+ * \~
+ * @copyright Copyright 2018 Fairy Devices Inc. http://www.fairydevices.jp/
+ * @copyright Apache License, Version 2.0
+ * @author Masato Fujino, created on: 2018/02/01
+ *
+ * Copyright 2018 Fairy Devices Inc. http://www.fairydevices.jp/
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-#include "../cmdline/cmdline.h"
+#include "../include/cmdline/cmdline.h"
+#include "../include/BlockingQueue.h"
+
 #include <mimiio.h>
 #include <portaudio.h>
 
@@ -23,79 +43,6 @@
 
 volatile sig_atomic_t interrupt_flag_ = 0;
 void sig_handler_(int signum){ interrupt_flag_ = 1; }
-
-/**
- * @class BlockingQueue
- * \~english
- * @brief A simple blocking queue with timeout
- * @tparam T Value type for element of the queue.
- * @tparam Container Container class. The default \e Container is std::deque.
- * @attention When you choose short or float as value type, this class should not be used under high through-put use case,
- * because push or pop must obtain lock, that is relatively high cost operation. In such case you should consider choosing std::array<short/float> as
- * value type or use lock-free queue instead of using blocking queue.
- * @note According to the portaudio document, you must not use blocking queue (lock queue) in portaudio callback function.
- * In the strict sense, lock-free queue is suitable for the callback function. For this example program, we use blocking queue to simplify demonstration.
- *
- * \~japanese
- * @brief シンプルなタイムアウトつきブロッキングキューの実装
- * @tparam T キューに格納するデータ型
- * @tparam キューを実現するコンテナ型
- * @attention データ型を short 型などサンプル単位にした場合、ロック取得が高コストであるため push/pop が高頻度に発生するようなスループットの高い利用には向かない。
- * そのような場合は、キューに出し入れする単位を std::array<short> などより大きな単位とするか、ロックフリーキューを使うことを検討する
- * @note portaudio のドキュメントに従うと、portaudio のコールバック関数内でブロッキングキュー（ロックキュー）を使うべきではない。厳密にはロックフリーキューを
- * 使わなければならないが、本サンプルプログラムでは簡単のためブロッキングキューで代替する。
- */
-template <class T, class Container = std::deque<T>>
-class BlockingQueue
-{
-public:
-	/**
-	 * @brief Push to queue
-	 * @param [in] value A value to be pushed.
-	 */
-    void push(T const& value)
-    {
-        {
-            std::unique_lock<std::mutex> lock(mutex_);
-            queue_.push_front(value);
-        }
-        condition_.notify_one();
-    }
-
-    /**
-     * @brief Pop from queue with timeout
-     * @param [out] value A value popped from the queue
-     * @param [in] timeout Timeout for pop
-     * @return True if successfully popped, false if timed out.
-     */
-    bool pop(T& value, std::chrono::milliseconds timeout)
-    {
-        std::unique_lock<std::mutex> lock(mutex_);
-    	if (!condition_.wait_for(lock, timeout, [=]{ return !queue_.empty(); })) {
-    		return false;
-    	}
-        value = queue_.back();
-        queue_.pop_back();
-        return true;
-    }
-
-    /**
-     * @brief Return size of container
-     * @return The size of the container
-     */
-    int size() const { return queue_.size(); }
-
-private:
-    std::mutex mutex_;
-    std::condition_variable condition_;
-    Container queue_;
-};
-
-/**
- * \~english Blocking queue with the short type of element.
- * \~japanese Short 型のサンプルを要素に持つブロッキングキューの型エイリアス
- */
-using SampleQueue = BlockingQueue<short>;
 
 /**
  * \~english
@@ -237,7 +184,6 @@ bool parse_afstring(const std::string &afstring, MIMIIO_AUDIO_FORMAT *af) {
     };
     return false;
 };
-
 
 /**
  * @brief main function

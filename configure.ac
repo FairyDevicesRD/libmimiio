@@ -143,6 +143,7 @@ else
    HAVE_PORTAUDIO=0
 fi
 AM_CONDITIONAL(PA_DEP_BUILD, test x$ac_cv_portaudio = xyes)
+AC_SUBST(HAVE_PORTAUDIO)
 
 PKG_CHECK_MODULES(FLAC, flac++, ac_cv_flac=1, ac_cv_flac=0)
 AC_DEFINE_UNQUOTED([HAVE_FLAC], $ac_cv_flac, [Set 1 if you have libflac.])
@@ -156,6 +157,20 @@ else
 fi
 AM_CONDITIONAL(FLAC_DEP_BUILD, test x$ac_cv_flac = xyes)
 AC_SUBST(HAVE_FLAC)
+
+# Check for libmimixfe
+#AX_MIMIXFE_BASE(AC_MSG_ERROR([OK]), AC_MSG_ERROR(NG))
+AX_MIMIXFE_BASE(ac_cv_mimixfe=1, ac_cv_mimixfe=0)
+AC_DEFINE_UNQUOTED([HAVE_MIMIXFE], $ac_cv_mimixfe, [Set 1 if you have mimixfe.])
+if test x$ac_cv_mimixfe = x1; then
+   ac_cv_mimixfe=yes
+   HAVE_MIMIXFE=1
+else
+   ac_cv_mimixfe=no
+   HAVE_MIMIXFE=0
+fi
+AM_CONDITIONAL(MIMIXFE_DEP_BUILD, test x$ac_cv_mimixfe = xyes)
+AC_SUBST(HAVE_MIMIXFE)
 
 # GCC misc
 if test $ac_cv_c_compiler_gnu = yes; then
@@ -228,6 +243,7 @@ AC_CONFIG_FILES([
  examples/mimiio_file/Makefile
  examples/mimiio_pa/Makefile
  examples/mimiio_tumbler/Makefile
+ examples/mimiio_tumbler/mimiio_tumbler_ex1/Makefile
  doc/Makefile
  mimiio.pc
 ])
@@ -259,9 +275,9 @@ echo "  SSL Client Cert:  ............... system built-in default cert\n"
 fi
 
 if test x"$debug" = x"true" ; then
-echo "  Debug Build:  ................... yes (-g3 -Od)\n"
+echo "  Debug Build:  ................... yes (-g -O0 )\n"
 else
-echo "  Debug Build:  ................... no (-g -O2)\n"
+echo "  Debug Build:  ................... no (-g -O2 )\n"
 fi 
 
 AC_MSG_RESULT([  Dependent libraries : 
@@ -275,6 +291,7 @@ AC_MSG_RESULT([  Optional libraries for usage examples: ])
 
 AC_MSG_RESULT([
     Portaudio > v19        ........ ${ac_cv_portaudio}
+    mimixfe > v0           ........ ${ac_cv_mimixfe}
 ]) 
 
 AC_MSG_RESULT([  Installation directories :

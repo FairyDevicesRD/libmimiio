@@ -1,14 +1,10 @@
 /*
- * @file mimiio_file.cp
+ * @file mimiio_tumbler_ex1.cpp
  * @ingroup examples_src
  * \~english
- * @brief Simple example of sending audio from file. This is just for API demonstration,
- * if you actually want to send audio to mimi from file, you should consider using mimi
- * HTTP API Service instead of WebSocket Service.
- *
+ * @brief Simple example of progressive sending audio with libmimixfe signal processing. The output of libmimixfe is limited to 1ch.
  * \~japanese
- * @brief 音声ファイルから音声データをサーバーに送信する例. この例は API デモンストレーションのための例であり、
- * もし実際に音声ファイルを送信したい場合は、mimi HTTP API Service の利用を検討してください。
+ * @brief libmimixfe を利用した連続マイク入力から信号処理済音声データをサーバーにリアルタイムで送信する最もシンプルな例のひとつ
  * \~
  * @copyright Copyright 2018 Fairy Devices Inc. http://www.fairydevices.jp/
  * @copyright Apache License, Version 2.0
@@ -29,21 +25,40 @@
  * limitations under the License.
  */
 
-#include "../include/cmdline/cmdline.h"
-#include <iostream>
+#include "../../include/cmdline/cmdline.h"
+#include "../../include/BlockingQueue.h"
 #include <mimiio.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <XFERecorder.h>
+#include <iostream>
+#include <string>
+#include <cstring>
+#include <vector>
 #include <unistd.h>
-#ifdef __APPLE__
-#include <syslog.h>
-#endif
+#include <signal.h>
 
-#include <stdlib.h>
+volatile sig_atomic_t interrupt_flag_ = 0;
+void sig_handler_(int signum){ interrupt_flag_ = 1; }
 
-FILE *inputfile_; //!< audio file to be sent
+/**
+ * \~english
+ * @brief libmimixfe record callback, see libmimixfe documents in detail such as meaning of each arguments.
+ * \~japanese
+ * @brief libmimixfe 録音コールバック関数、引数の意味など詳細は libmimixfe ドキュメントを参照してください
+ */
+void recorderCallback(
+		short* buffer,
+		size_t buflen,
+		mimixfe::SpeechState state,
+		int sourceId,
+		mimixfe::StreamInfo* info,
+		size_t infolen,
+		void* userdata
+){
+	SampleQueue* queue = reinterpret_cast<SampleQueue*>(userdata);
+	for(size_t i=0;i<buflen;++i){
+		queue->push(buffer[i]);
+	}
+}
 
 /**
  * \~english
@@ -69,25 +84,30 @@ FILE *inputfile_; //!< audio file to be sent
  * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
  * @param [in,out] userdata 任意のユーザー定義データ
  */
-void txfunc(char *buffer, size_t *len, bool *recog_break, int *txfunc_error, void *userdata)
+void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, void* userdata)
 {
-    size_t chunk_size = 2048;
-    *len = fread(buffer, 1, chunk_size, inputfile_); // 音声ファイルを chunk_size ずつサーバーに送信します
-    if (*len < chunk_size) { // 音声ファイルを読み終わった時点で、送信の終了を宣言します
-        *recog_break = true;
-    }
+	if(interrupt_flag_ != 0){
+		*recog_break = true;
+		return;
+	}
 
-    //If you want to emulate speed-limited communication line, see below;
-    //リアルタイム送信をエミュレートする場合は以下のような実装が利用可能です
-    //
-    //float send_rate_ = 256; // 送信速度制限[kbps]
-    //float byte_per_sec = send_rate_*1024. / 8.;
-    //float wait_sec = 1.0 / (byte_per_sec / chunk_size);
-    //usleep(wait_sec*1000000.);
-    //*len = fread(buffer, 1, chunk_size, inputfile_);
-    //if (*len < chunk_size) {
-    //    *recog_break = true;
-    //}
+	std::chrono::milliseconds timeout(1000); // queue timeout
+	SampleQueue* queue = static_cast<SampleQueue*>(userdata);
+	auto current_queue_size = queue->size();
+	int length = 0;
+	std::vector<short> tmp;
+	for(auto i=0;i<current_queue_size;i+=2){
+		short sample = 0;
+		if(queue->pop(sample, timeout)){
+			tmp.push_back(sample);
+		    length += 2;
+		}else{
+			*txfunc_error = -100; // Timeout for pop from queue.
+			break;
+		}
+	}
+	*len = length;
+	std::memcpy(buffer, &tmp[0], tmp.size()*2);
 }
 
 /**
@@ -110,7 +130,7 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int *txfunc_error, voi
  * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
  * @param [in,out] userdata 任意のユーザー定義データ
  */
-void rxfunc(const char *result, size_t len, int *rxfunc_error, void *userdata)
+void rxfunc(const char* result, size_t len, int* rxfunc_error, void *userdata)
 {
 	std::string s(result, len);
 	std::cout << s << std::endl;
@@ -152,18 +172,16 @@ bool parse_afstring(const std::string &afstring, MIMIIO_AUDIO_FORMAT *af) {
 
 /**
  * @brief main function
- * Simple example of sending audio from file.
  * @return exit code
  */
-int main(int argc, char **argv) {
-
+int main(int argc, char** argv)
+{
 	// Parsing command-line arguments
     cmdline::parser p;
     {
         // mandatory
         p.add<std::string>("host", 'h', "Host name", true);
         p.add<int>("port", 'p', "Port", true);
-        p.add<std::string>("input", 'i', "Input file", true);
         // optional
         p.add<std::string>("token", 't', "Access token", false);
         p.add<int>("rate", '\0', "Sampling rate", false, 16000);
@@ -190,76 +208,109 @@ int main(int argc, char **argv) {
     MIMIIO_AUDIO_FORMAT af;
     const bool ok = parse_afstring(p.get<std::string>("format"), &af);
     if (!ok) {
-        std::cerr << "Invalid audio format: " << p.get<std::string>("format")
-                  << std::endl;
+        std::cerr << "Invalid audio format: " << p.get<std::string>("format") << std::endl;
         return 1;
     }
 
-    // Open input file
-    inputfile_ = fopen(p.get<std::string>("input").c_str(), "rb");
-    if (inputfile_ == nullptr) {
-        std::cerr << "Could not open file: " << p.get<std::string>("input")
-                  << std::endl;
-        return 1;
-    }
+	BlockingQueue<short> queue;
 
-    // Prepare mimi runtime configuration
-    int errorno = 0;
-    size_t header_size = 0;
-    MIMIIO_HTTP_REQUEST_HEADER *h = nullptr;
+	// Initialize mimixfe
+	try{
+		 int xfe_errorno = 0;
+		 mimixfe::XFESourceConfig s;
+		 mimixfe::XFEECConfig e;
+		 mimixfe::XFEVADConfig v;
+		 mimixfe::XFEBeamformerConfig b;
+		 mimixfe::XFEStaticLocalizerConfig c({mimixfe::Direction(270, 90)});
+		 mimixfe::XFERecorder rec(s,e,v,b,c,recorderCallback,reinterpret_cast<void*>(&queue));
+		 rec.setLogLevel(LOG_UPTO(LOG_DEBUG));
+		 if(signal(SIGINT, sig_handler_) == SIG_ERR){
+			 return 1;
+		 }
+		 if(p.exist("verbose")){
+			std::cerr << "XFE recording stream is successfully initialized." << std::endl;
+		 }
+		 // Recording start
+		 rec.start();
+		 if (p.exist("verbose")) {
+			 std::cerr << "XFE recording stream is successfully started." << std::endl;
+		 }
 
-    // Open mimi stream
-    MIMI_IO *mio = mimi_open(
-        p.get<std::string>("host").c_str(), p.get<int>("port"), txfunc, rxfunc,
-        nullptr, nullptr, af, p.get<int>("rate"), p.get<int>("channel"), h,
-        header_size, access_token, MIMIIO_LOG_DEBUG, &errorno);
+		 // Prepare mimi runtime configuration
+		 size_t header_size = 0;
+		 MIMIIO_HTTP_REQUEST_HEADER *h = nullptr;
 
-    if (mio == nullptr) {
-        fprintf(stderr, "Could not initialize mimi(R) service. mimi_open() "
-                        "failed: %s (%d)\n",
-                mimi_strerror(errorno), errorno);
-        fclose(inputfile_);
-        return 1;
-    }
-    if (p.exist("verbose")) {
-        fprintf(stderr, "Connection is successfully opened.\n");
-    }
+		 // Open mimi stream
+		 int errorno = 0;
+		 MIMI_IO *mio = mimi_open(
+					p.get<std::string>("host").c_str(), p.get<int>("port"), txfunc, rxfunc,
+					static_cast<void*>(&queue), static_cast<void*>(&queue), af, p.get<int>("rate"), p.get<int>("channel"), h,
+					header_size, access_token, MIMIIO_LOG_DEBUG, &errorno);
+		 if(mio == nullptr){
+			 std::cerr << "Could not initialize mimi(R) service. mimi_open() failed: " << mimi_strerror(errorno) << " (" << errorno << ")"<< "\n";
+			 return 3;
+		 }
+		 if (p.exist("verbose")) {
+			 std::cerr << "mimi connection is successfully opened." << std::endl;
+		 }
 
-    // Start mimi stream
-    errorno = mimi_start(mio);
-    if (errorno != 0) {
-        fprintf(stderr, "Could not start mimi(R) service. mimi_start() filed. See syslog in detail.\n");
-        mimi_close(mio);
-        fclose(inputfile_);
-        return 1;
-    }
-    if (p.exist("verbose")) {
-        fprintf(stderr, "Full duplex stream is started.\n");
-    }
-    while (mimi_is_active(mio)) {
-        // Wait 0.1 sec to avoid busy loop
-        usleep(100000);
-    }
-    if (p.exist("verbose")) {
-        fprintf(stderr, "mimi_is_active returns false now.\n");
-    }
-    errorno = mimi_error(mio);
-    if (errorno != 0) {
-        fprintf(
-            stderr,
-            "An error occurred while communicating mimi(R) service: %s (%d)\n",
-            mimi_strerror(errorno), errorno);
-        mimi_close(mio);
-        fclose(inputfile_);
-        return 1;
-    }
+		 //Start mimi(R) stream
+		 errorno = mimi_start(mio);
+		 if(errorno != 0){
+			 std::cerr << "Could not start mimi(R) service. mimi_start() filed. See syslog in detail.\n";
+			 mimi_close(mio);
+			 rec.stop(); // you don't have to call rec.stop() because destructor of XFERecorder class will clean up automatically.
+			 return 3;
+		 }
+		 if (p.exist("verbose")) {
+			 std::cerr << "mimi connection is successfully started." << std::endl;
+			 std::cerr << "Ready..." << std::endl;
+		 }
 
-    // Close mimi connection
-    mimi_close(mio);
-    if (p.exist("verbose")) {
-        fprintf(stderr, "Connection is closed.\n");
-    }
-    fclose(inputfile_);
-    free(h);
-    return 0;
+		 int usec = 100000; // 0.1sec, you should choose appropriate value
+		 while(rec.isActive() && mimi_is_active(mio)){
+			 if(interrupt_flag_ != 0){
+				 if (p.exist("verbose")) {
+					 std::cerr << "Waiting for fixed result..." << std::endl;
+				 }
+				 rec.stop();
+				 while(mimi_is_active(mio)){
+					 usleep(usec);
+				 }
+			 }
+			 usleep(usec);
+		 }
+		 if (p.exist("verbose")) {
+			 std::cerr << "Stream is to be finished." << std::endl;
+		 }
+		 if(xfe_errorno != 0){
+			 std::cerr << "An error occurred in mimixfe (" << xfe_errorno << ")" << std::endl;
+		 }
+
+		 // clean up mimi connection
+		 errorno = mimi_error(mio);
+		 if(errorno == -100){ // user defined.
+			 std::cerr << "An error occurred in mimii_tumbler_ex1, timed out for pop from queue." << std::endl;
+		 }else if(errorno > 0){ //libmimiio internal error code
+			 std::cerr << "An error occurred in mimiio: " << mimi_strerror(errorno) << "(" << errorno << ")" << std::endl;
+		 }
+		 mimi_close(mio);
+		 if (p.exist("verbose")) {
+			 std::cerr << "All resources are cleaned up." << std::endl;
+		 }
+		 return 0;
+
+    }catch(const mimixfe::XFERecorderError& e){
+    	std::cerr << "XFE Recorder Exception: " << e.what() << "(" << e.errorno() << ")" << std::endl;
+		return 2;
+	 }catch(const std::exception& e){
+		std::cerr << "Exception: " << e.what() << std::endl;
+		return 2;
+	 }
+	 if(p.exist("verbose")){
+		 std::cerr << "XFE recording stream is successfully started." << std::endl;
+	 }
 }
+
+
+

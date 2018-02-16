@@ -14,7 +14,7 @@ WebSocket (RFC6455) 通信を利用した mimi(R) WebSocket API Service を簡�
 
 #### 必須
 
-- Poco C++ libraries Complete Edition 1.8.1 以上
+- Poco C++ libraries Complete Edition 1.8.1 以上。プレビルドライブラリは[こちら](https://github.com/FairyDevicesRD/tumbler.poco)に用意されています
 - libflac++ 1.3.0 以上
 
 #### オプション
@@ -38,10 +38,13 @@ $ sudo make install
 
 ``````````.sh
 $ autoreconf -vif
-$ ./configure-tumbler
+$ ./configure --with-mimixfe-prefix=/path/to/mimixfe
 $ make
 $ sudo make install
 ``````````
+
+- libmimixfe の位置をマニュアルで指定する必要があります
+- `./configure` の代わりに、`./configure-tumbler` を利用することでより最適化されたバイナリが生成できますが、`./configure-tumbler` の内容をご確認の上、ご利用ください。
 
 #### Mac OS X
 
@@ -63,7 +66,8 @@ mingw, cygwin 等を利用し、Linux に準じて適宜ビルドしてくださ
 標準の configure オプション以外に、libmimiio は以下の configure オプションをサポートしています。すべてのオプションは `./configure --help` で確認することができます。
 
 - `--enable-debug` libmimiio が `-g -O0` でコンパイルされる。サンプルプログラムは libmimiio をスタティックリンクする
-- `--with-poco-prefix` Poco C++ libraries が標準的ではない場所にある場合に指定する
+- `--with-mimixfe-prefix` libmimixfe の場所を指定する。例として `/home/foo/libmimixfe` 以下に `include/`, `lib/` がある場合は `/home/foo/libmimixfe` を指定する
+- `--with-poco-prefix` Poco C++ libraries が標準的ではない場所にある場合に指定する。例として `/home/foo/poco/` 以下に `include/`, `lib` がある場合は `/home/foo/poco` を指定する。プレビルドライブラリのディレクトリ構成を参照。  
 - `--with-ssl-default-cert` クライアント証明書の位置を指定する。指定しなかった場合は、システムビルトインのデフォルト証明書が利用される。
 
 ## サンプルプログラム
