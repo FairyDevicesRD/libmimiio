@@ -50,7 +50,7 @@ Acceptable audio formats:
 
 ##### 便利な使い方
 
-出力の JSON 形式を見やすく表示するための pretty print 用のスクリプト [pretty_print.py](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/pretty_print.py) を用意しました。以下のように出力をパイプすることで
+出力の JSON 形式から認識結果だけを取り出し見やすく表示するための pretty print 用のスクリプト [pretty_print.py](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/pretty_print.py) を用意しました。以下のように出力をパイプすることで
 
 ``````````.txt
 ./mimiio_tumbler_ex1 --host=.... --verbose | ../../pretty_print.py
@@ -74,7 +74,7 @@ Stream is to be finished.
 All resources are cleaned up.
 ``````````
 
-サンプルプログラムの `--verbose` 出力（標準エラー出力）はそのままに、mimi API Service の JSON 形式（標準出力）を逐次的に pretty print します。
+サンプルプログラムの `--verbose` 出力（標準エラー出力）はそのままに、mimi API Service の JSON 形式（標準出力）から認識結果だけを取り出し逐次的に pretty print します。このスクリプト例に限らず、必要に合わせて、このような pretty print スクリプトを準備すると良いことがあるかもしれません。
 
 ## 主要部解説
 
