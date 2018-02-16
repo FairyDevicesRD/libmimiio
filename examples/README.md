@@ -26,7 +26,7 @@ libmimiio をビルドすると、サンプルプログラムも同時にビル�
 
 #### mimiio_tumbler_ex1
 
-Fairy I/O Tumbler T-01 上で、[libmimixfe](https://github.com/FairyDevicesRD/libmimixfe)と組み合わせ（機能制限有）、録音及び信号処理された音声を入力として、リアルタイムでサーバーに送信し、リアルタイムでサーバーから認識結果を受信する最も単純なサンプルプログラムです。サンプルプログラムの単純化のために、機能制限として、libmimixfe の設定上、同時検出する音源数が 1 の場合のみに対応し、同時複数音源を抽出する設定になっている場合には利用することができません。また、libmimixfe の VAD の結果を無視し、最終認識結果を除き、途中認識結果はすべて `recog-in-progress` ステートで得られます。
+Fairy I/O Tumbler T-01 上で、[libmimixfe](https://github.com/FairyDevicesRD/libmimixfe)と組み合わせ（機能制限有）、録音及び信号処理された音声を入力として、リアルタイムでサーバーに送信し、リアルタイムでサーバーから認識結果を受信する最も単純なサンプルプログラムです。サンプルプログラムの単純化のために、機能制限として、libmimixfe の設定上、同時検出する音源数が 1 の場合のみに対応し、同時複数音源を抽出する設定になっている場合には対応していません。また、libmimixfe の VAD の結果を無視し、最終認識結果を除き、途中認識結果はすべて `recog-in-progress` ステートで得られます。
 
 #### mimiio_tumbler_ex2
 
