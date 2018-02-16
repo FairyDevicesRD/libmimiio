@@ -22,7 +22,7 @@ Fairy I/O Tumbler 上で、libmimixfe と組み合わせ（機能制限有）、
 
 ### コマンドライン引数
 
-``````````.sh
+``````````.bash
 usage: ./mimiio_tumbler_ex1 --host=string --port=int [options] ...
 options:
   -h, --host       Host name (string)
@@ -47,6 +47,16 @@ Acceptable audio formats:
     MIMIIO_FLAC_8
     MIMIIO_FLAC_PASS_THROUGH
 ``````````
+
+##### 便利な使い方
+
+出力の JSON 形式を見やすく表示するためには jq コマンドが便利です。 一例として、
+
+``````````.bash
+./mimiio_tumbler_ex1 --host=.... | jq ".response[].result"
+``````````
+
+のようにすることで、音声認識結果だけを見ることができるようになります。
 
 ## 主要部解説
 
