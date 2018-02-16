@@ -22,7 +22,7 @@ Fairy I/O Tumbler 上で、libmimixfe と組み合わせ（機能制限有）、
 
 ### コマンドライン引数
 
-``````````.bash
+``````````.txt
 usage: ./mimiio_tumbler_ex1 --host=string --port=int [options] ...
 options:
   -h, --host       Host name (string)
@@ -80,7 +80,7 @@ All resources are cleaned up.
 
 ### libmimixfe による XFERecorder の初期化と録音の開始
 
-``````````.txt
+``````````.cpp
 int xfe_errorno = 0;
 mimixfe::XFESourceConfig s;
 mimixfe::XFEECConfig e;
