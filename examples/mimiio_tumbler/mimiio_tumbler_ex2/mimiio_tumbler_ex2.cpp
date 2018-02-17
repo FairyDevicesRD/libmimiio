@@ -25,7 +25,6 @@
  */
 
 #include "../../include/cmdline/cmdline.h"
-#include "../../include/BlockingDeque.h"
 #include "../../include/BlockingQueue.h"
 #include <mimiio.h>
 #include <XFERecorder.h>
@@ -352,16 +351,18 @@ int main(int argc, char** argv)
         return 1;
     }
 
-	// Initialize mimixfe
 	try{
+
+		// Initialize mimixfe
 	    Session::ConnectionParam param(p.get<std::string>("host"), p.get<int>("port"), access_token,
 	    		p.get<int>("rate"), p.get<int>("channel"), af, p.exist("verbose"));
 	    Session session(param);
-
 	    int xfe_errorno = 0;
 	    mimixfe::XFESourceConfig s;
 	    mimixfe::XFEECConfig e;
 	    mimixfe::XFEVADConfig v;
+	    v.timeToInactive_  = 600;
+	    v.tailPaddingTime_ = 400;
 	    mimixfe::XFEBeamformerConfig b;
 	    mimixfe::XFEStaticLocalizerConfig c({mimixfe::Direction(270, 90)});
 	    mimixfe::XFERecorder rec(s,e,v,b,c,recorderCallback,reinterpret_cast<void*>(&session));
