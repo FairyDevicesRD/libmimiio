@@ -32,7 +32,7 @@ Fairy I/O Tumbler 上で、[libmimixfe](https://github.com/FairyDevicesRD/libmim
 
 #### [mimiio_tumbler_ex2](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex2)
 
-ex1 と同様ですが、ibmimixfe の VAD の結果を利用し、発話毎にリモートホストへのコネクションを準備し、発話毎に `recog-finished` ステートを得るサンプルプログラムです。
+ex1 と同様ですが、ibmimixfe の VAD の結果を利用し、発話毎にリモートホストへのコネクションを準備し、発話毎に `recog-finished` ステートを得るサンプルプログラムです。簡易的な設計ですが、より実用的なサンプルプログラムとなっています。
 
 #### mimiio_tumbler_ex3
 
