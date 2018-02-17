@@ -24,7 +24,7 @@ Fairy I/O Tumbler 上で、libmimixfe と組み合わせ（機能制限有）、
 
 ### コマンドライン引数
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%83%A9%E3%82%A4%E3%83%B3%E5%BC%95%E6%95%B0) と同様です
+[mimiio_tumbler_ex1 該当箇所](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%83%A9%E3%82%A4%E3%83%B3%E5%BC%95%E6%95%B0) と同様です。 pretty_print.py も使えます。
 
 ## 主要部解説
 
@@ -40,7 +40,7 @@ Session session(param);
 
 ### libmimixfe による XFERecorder の初期化と録音の開始
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1) とほぼ同様です。一部 XFE のパラメータを高速寄りにチューニングしている場合があります。ユーザー定義データとして、上記の通り、`Session` クラスのインスタンスのポインタを与えています。
+[mimiio_tumbler_ex1 該当箇所](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#libmimixfe-%E3%81%AB%E3%82%88%E3%82%8B-xferecorder-%E3%81%AE%E5%88%9D%E6%9C%9F%E5%8C%96%E3%81%A8%E9%8C%B2%E9%9F%B3%E3%81%AE%E9%96%8B%E5%A7%8B) とほぼ同様です。一部 XFE のパラメータを高速寄りにチューニングしている場合があります。ユーザー定義データとして、上記の通り、`Session` クラスのインスタンスのポインタを与えています。
 
 ### メインスレッドの監視待機
 
@@ -87,11 +87,11 @@ void recorderCallback(
 }
 ``````````
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1) との差に着目してください。`userdata*` からは後述する `Session` クラスを取り出しています。`Session` クラスには、ex1 でも利用したブロッキングキューがあり、`addAudioData()` 関数により、ブロッキングキューにデータを push しているところは同じです。
+[mimiio_tumbler_ex1 該当箇所](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#libmimixfe-%E9%8C%B2%E9%9F%B3%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E9%96%A2%E6%95%B0%E3%81%AE%E5%AE%9F%E8%A3%85) との差に着目してください。`userdata*` からは後述する `Session` クラスを取り出しています。`Session` クラスには、ex1 でも利用したブロッキングキューがあり、`addAudioData()` 関数により、ブロッキングキューにデータを push しているところは同じです。
 
-libmimixfe の VAD の判定結果は、このコールバック関数の第三引数 `state` に与えられます。発話の開始（`mimixfe::SpeechState::SpeechStart`）が検出された時点で、セッションを開き（`open()`）、通信を開始（`start()`）します。
+libmimixfe の VAD の判定結果は、このコールバック関数の第三引数 `state` に与えられます。発話の開始 `mimixfe::SpeechState::SpeechStart` が検出された時点で、セッションを開き `open()`、通信を開始 `start()` します。
 
-発話の終了（`mimixfe::SpeechState::SpeechEnd`）が検出された時点で、最終結果を得るための命令(`recog-break`)を送信しています。
+発話の終了 `mimixfe::SpeechState::SpeechEnd` が検出された時点で、最終結果を得るための命令 `recog-break` を送信しています。
 
 ##### 留意点
 
@@ -145,7 +145,7 @@ public:
 	}
 ``````````
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1) と同様ですが、`mimi_open()` が何らかのテンポラリな要因で失敗した場合のリトライを行う例を示しています。
+[mimiio_tumbler_ex1 該当箇所](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#libmimiio-%E3%81%AB%E3%82%88%E3%82%8B%E3%83%AA%E3%83%A2%E3%83%BC%E3%83%88%E3%83%9B%E3%82%B9%E3%83%88%E3%81%B8%E3%81%AE%E6%8E%A5%E7%B6%9A%E3%82%AA%E3%83%BC%E3%83%97%E3%83%B3%E3%81%A8-websocket-%E9%80%9A%E4%BF%A1%E3%81%AE%E9%96%8B%E5%A7%8B) と同様ですが、`mimi_open()` が何らかのテンポラリな要因で失敗した場合のリトライを行う例を示しています。
 
 このサンプルプログラムでは、簡単のため、`Session` クラスのひとつのインスタンスを使い回すので、冒頭で、前回の接続が残っている場合には、その接続が終了するまでやはり直列に待つ簡易的な実装としています。
 
@@ -173,7 +173,7 @@ public:
 
 ``````````
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1) と同様です。
+[mimiio_tumbler_ex1 該当箇所](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#libmimiio-%E3%81%AB%E3%82%88%E3%82%8B%E3%83%AA%E3%83%A2%E3%83%BC%E3%83%88%E3%83%9B%E3%82%B9%E3%83%88%E3%81%B8%E3%81%AE%E6%8E%A5%E7%B6%9A%E3%82%AA%E3%83%BC%E3%83%97%E3%83%B3%E3%81%A8-websocket-%E9%80%9A%E4%BF%A1%E3%81%AE%E9%96%8B%E5%A7%8B) と同様です。
 
 
 #### リモートホストとの接続を終了する
@@ -233,7 +233,7 @@ libmimiio の音声送信コールバック関数から、データ送信の終�
 	void addAudioData(const short& sample) { sdata_.queue_.push(sample); }
 ``````````
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1) でも利用した `SampleQueue` に音声データを push するだけのメンバー関数を用意しています。単に形式的にカプセル化したものであり、`queue_` を public にして直接 push すればこの関数は不要です。
+[mimiio_tumbler_ex1 該当箇所](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#libmimixfe-%E9%8C%B2%E9%9F%B3%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E9%96%A2%E6%95%B0%E3%81%AE%E5%AE%9F%E8%A3%85) でも利用した `SampleQueue` に音声データを push するだけのメンバー関数を用意しています。単に形式的にカプセル化したものであり、`queue_` を public にして直接 push すればこの関数は不要です。
 
 ### libmimiio 音声送信コールバック関数の実装
 
@@ -261,7 +261,7 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, voi
 }
 ``````````
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1) とほぼ同様です。ユーザー定義データから、`recog_break` フラグも取り出していることに留意してください。
+[mimiio_tumbler_ex1 該当箇所](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#libmimiio-%E9%9F%B3%E5%A3%B0%E9%80%81%E4%BF%A1%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E9%96%A2%E6%95%B0%E3%81%AE%E5%AE%9F%E8%A3%85) とほぼ同様です。ユーザー定義データから、`recog_break` フラグも取り出していることに留意してください。
 
 また、キューからデータを取り出す**前**に `recog_break` を取り出していることに留意してください。データプロデューサー側（録音コールバック関数）では、先にデータを詰めてから後で `recog_break` フラグをセットしていることを思い出してください。つまり、データコンシューマー側であるこのコールバック関数が呼ばれた時に、もし `recog_break` フラグがセットされていれば、その時点でのキューを読み切れば、少なくとも、その発話についての音声データは取り切れるということになります。これとは逆に、データコンシューマー側でキューからデータを取り出した**後**に `recog_break` を評価すると、その時間差で、その発話についての音声データの末尾を取りこぼすことになりますので注意してください。
 
@@ -273,4 +273,4 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, voi
 
 ### libmimiio 結果受信コールバック関数の実装
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#libmimiio-%E7%B5%90%E6%9E%9C%E5%8F%97%E4%BF%A1%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E9%96%A2%E6%95%B0%E3%81%AE%E5%AE%9F%E8%A3%85) と同様です。
+[mimiio_tumbler_ex1 該当箇所](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#libmimiio-%E7%B5%90%E6%9E%9C%E5%8F%97%E4%BF%A1%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E9%96%A2%E6%95%B0%E3%81%AE%E5%AE%9F%E8%A3%85) と同様です。
