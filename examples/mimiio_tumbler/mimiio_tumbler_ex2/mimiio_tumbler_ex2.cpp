@@ -158,7 +158,7 @@ public:
 	bool open()
 	{
 		if(mio_ != nullptr){
-			close(); // 前回の接続が残っている場合は、単純に待つ
+			close();
 		}
 		int retry = 0;
 		while(retry++ < mimi_open_retry_){
@@ -230,16 +230,6 @@ public:
 	 * @param [in] sample Single audio sample
 	 */
 	void addAudioData(const short& sample) { sdata_.queue_.push(sample); }
-
-	/**
-	 * @brief Check if the stream is active or not
-	 * @return true if stream is active otherwise false
-	 */
-	bool isActive() const
-	{
-		if(mio_ == nullptr) return false;
-		return mimi_is_active(mio_);
-	}
 
 private:
 	const ConnectionParam& param_;
