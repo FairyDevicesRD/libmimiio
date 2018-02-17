@@ -24,7 +24,7 @@ Fairy I/O Tumbler 上で、libmimixfe と組み合わせ（機能制限有）、
 
 ### コマンドライン引数
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1) と同様です
+[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%83%A9%E3%82%A4%E3%83%B3%E5%BC%95%E6%95%B0) と同様です
 
 ## 主要部解説
 
