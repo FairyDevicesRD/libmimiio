@@ -267,10 +267,10 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, voi
 
 ##### 留意点
 
-この実装は、簡単のために、簡易的な設計に基づいており、不適切な動作の原因となり得ます。上記動作のために、`recog_break` フラグを評価した次の行で、その時点でのキューサイズを確定していますが、この 1 行の間に、データプロデューサー側が、recog_break フラグをオフにして、さらに新しいデータを追加してしまっていることが**ない**と保証することはできません（実際には、この実装においては、そのようなことが起こるとは想定しにくいですが…）。
+この実装は、簡単のために、簡易的な設計に基づいており、不適切な動作の原因となり得ます。上記動作のために、`recog_break` フラグを評価した次の行で、その時点でのキューサイズを確定していますが、この 1 行の間に、データプロデューサー側が、`recog_break` フラグをオフにして、さらに新しいデータを追加してしまっていることが**ない**と保証することはできません（実際には、この実装においては、そのようなことが起こるとは想定しにくいですが…）。
 
-より堅牢な設計として、recog_break フラグを、この実装のようにキューと別に持つのではなく、キューのデータ要素自体がデータの終了等を示すことができるように、要素自体を short 型ではなく、short 型のサンプル値を含む、何らかの構造体とするという設計を推奨します。
+プロダクションにおいては、より堅牢な設計として、`recog_break` フラグを、この実装のようにキューと別に持つのではなく、キューのデータ要素自体がデータの終了等を示すことができるように、要素自体を short 型ではなく、short 型のサンプル値を含む何らかの構造体とするという設計を検討してください。
 
 ### libmimiio 結果受信コールバック関数の実装
 
-[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1) と同様です。
+[mimiio_tumbler_ex1](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex1#libmimiio-%E7%B5%90%E6%9E%9C%E5%8F%97%E4%BF%A1%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E9%96%A2%E6%95%B0%E3%81%AE%E5%AE%9F%E8%A3%85) と同様です。
