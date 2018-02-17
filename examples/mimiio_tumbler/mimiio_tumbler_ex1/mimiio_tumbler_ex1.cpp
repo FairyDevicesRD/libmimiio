@@ -245,10 +245,10 @@ int main(int argc, char** argv)
 		 int errorno = 0;
 		 MIMI_IO *mio = mimi_open(
 					p.get<std::string>("host").c_str(), p.get<int>("port"), txfunc, rxfunc,
-					static_cast<void*>(&queue), static_cast<void*>(&queue), af, p.get<int>("rate"), p.get<int>("channel"), h,
+					static_cast<void*>(&queue), nullptr, af, p.get<int>("rate"), p.get<int>("channel"), h,
 					header_size, access_token, MIMIIO_LOG_DEBUG, &errorno);
 		 if(mio == nullptr){
-			 std::cerr << "Could not initialize mimi(R) service. mimi_open() failed: " << mimi_strerror(errorno) << " (" << errorno << ")"<< "\n";
+			 std::cerr << "Could not open mimi(R) API service. mimi_open() failed: " << mimi_strerror(errorno) << " (" << errorno << ")"<< std::endl;
 			 return 3;
 		 }
 		 if (p.exist("verbose")) {
@@ -306,9 +306,6 @@ int main(int argc, char** argv)
 	 }catch(const std::exception& e){
 		std::cerr << "Exception: " << e.what() << std::endl;
 		return 2;
-	 }
-	 if(p.exist("verbose")){
-		 std::cerr << "XFE recording stream is successfully started." << std::endl;
 	 }
 }
 

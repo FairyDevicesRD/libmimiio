@@ -1,13 +1,15 @@
 /*
- * @file BlockingQueue.h
+ * @file BlockingDeque.h
  * \~english
- * @brief Simple blocking queue implementation which has pop with time out, thread safe
+ * @brief Simple thread-safe double ended blocking queue.
+ * @note You can use BlockingQueue.h in simple case.
  * \~japanese
- * @brief 簡易的なブロッキングキューの実装、スレッドセーフ
+ * @brief スレッドセーフな両端ブロッキングキュー
+ * @note 単純なブロッキングキューについては、BlockingQueue.h を利用できる
  * \~
  * @copyright Copyright 2018 Fairy Devices Inc. http://www.fairydevices.jp/
  * @copyright Apache License, Version 2.0
- * @author Masato Fujino, created on: 2018/02/16
+ * @author Masato Fujino, created on: 2018/02/17
  *
  * Copyright 2018 Fairy Devices Inc. http://www.fairydevices.jp/
  *
@@ -23,39 +25,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-#ifndef EXAMPLES_INCLUDE_BLOCKINGQUEUE_H_
-#define EXAMPLES_INCLUDE_BLOCKINGQUEUE_H_
+
+#ifndef EXAMPLES_INCLUDE_BLOCKINGDEQUE_H_
+#define EXAMPLES_INCLUDE_BLOCKINGDEQUE_H_
 
 #include <mutex>
 #include <condition_variable>
 #include <deque>
+#include <stdexcept>
 
 /**
- * @class BlockingQueue
+ * @class BlockingDeque
  * \~english
- * @brief A simple blocking queue with timeout
+ * @brief Simple double ended blocking queue, thread safe.
  * @tparam T Value type for element of the queue.
  * @tparam Container Container class. The default \e Container is std::deque.
- * @attention When you choose short or float as value type, this class should not be used under high through-put use case,
- * because push or pop must obtain lock, that is relatively high cost operation. In such case you should consider choosing std::array<short/float> as
- * value type or use lock-free queue instead of using blocking queue.
+ * @see See also BlockingQueue.h
  *
  * \~japanese
- * @brief シンプルなタイムアウトつきブロッキングキューの実装
+ * @brief @brief スレッドセーフな両端ブロッキングキュー
  * @tparam T キューに格納するデータ型
  * @tparam キューを実現するコンテナ型
- * @attention データ型を short 型などサンプル単位にした場合、ロック取得が高コストであるため push/pop が高頻度に発生するようなスループットの高い利用には向かない。
- * そのような場合は、キューに出し入れする単位を std::array<short> などより大きな単位とするか、ロックフリーキューを使うことを検討する
+ * @see See also BlockinQueue.h
  */
 template <class T, class Container = std::deque<T>>
-class BlockingQueue
+class BlockingDeque
 {
 public:
 	/**
-	 * @brief Push to queue
+	 * @brief Blocking push_front() for std::deque<>
 	 * @param [in] value A value to be pushed.
 	 */
-    void push(T const& value)
+    void push_front(T const& value)
     {
         {
             std::unique_lock<std::mutex> lock(mutex_);
@@ -64,21 +65,38 @@ public:
         condition_.notify_one();
     }
 
+    T& front(std::chrono::microseconds timeout)
+    {
+    	std::unique_lock<std::mutex> lock(mutex_);
+    	if(!condition_.wait_for(lock, timeout, [=]{ !queue_.empty(); })){
+    		throw std::runtime_error("queue.front() time out");
+    	}
+    	return queue_.front();
+    }
+
+    T& back(std::chrono::microseconds timeout)
+    {
+    	std::unique_lock<std::mutex> lock(mutex_);
+    	if(!condition_.wait_for(lock, timeout, [=]{ !queue_.empty(); })){
+    		throw std::runtime_error("queue.back() time out");
+    	}
+    	return queue_.back();
+    }
+
     /**
      * @brief Pop from queue with timeout
      * @param [out] value A value popped from the queue
      * @param [in] timeout Timeout for pop
      * @return True if successfully popped, false if timed out.
      */
-    bool pop(T& value, std::chrono::milliseconds timeout)
+    void pop_back(T& value, std::chrono::milliseconds timeout)
     {
         std::unique_lock<std::mutex> lock(mutex_);
     	if (!condition_.wait_for(lock, timeout, [=]{ return !queue_.empty(); })) {
-    		return false;
+    		throw std::runtime_error("queue.pop() time out");
     	}
         value = queue_.back();
         queue_.pop_back();
-        return true;
     }
 
     /**
@@ -93,10 +111,8 @@ private:
     Container queue_;
 };
 
-/**
- * \~english Blocking queue with the short type of element.
- * \~japanese Short 型のサンプルを要素に持つブロッキングキューの型エイリアス
- */
-using SampleQueue = BlockingQueue<short>;
 
-#endif /* EXAMPLES_INCLUDE_BLOCKINGQUEUE_H_ */
+
+
+
+#endif /* EXAMPLES_INCLUDE_BLOCKINGDEQUE_H_ */

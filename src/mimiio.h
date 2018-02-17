@@ -103,7 +103,7 @@ extern "C"{
 		  MIMIIO_AUDIO_FORMAT format,
 		  int samplingrate,
 		  int channels,
-		  MIMIIO_HTTP_REQUEST_HEADER* extra_request_headers,
+		  const MIMIIO_HTTP_REQUEST_HEADER* extra_request_headers,
 		  int custom_request_headers_len,
 		  const char* access_token,
 		  int loglevel,

@@ -38,7 +38,7 @@ MIMI_IO* mimi_open(
 		MIMIIO_AUDIO_FORMAT format,
 		int samplingrate,
 		int channels,
-		MIMIIO_HTTP_REQUEST_HEADER* request_headers,
+		const MIMIIO_HTTP_REQUEST_HEADER* request_headers,
 		int request_headers_len,
 		const char* access_token,
 		int loglevel,
@@ -208,7 +208,9 @@ MIMIIO_STREAM_STATE mimi_stream_state(MIMI_IO* mio)
 
 void mimi_close(MIMI_IO* mio)
 {
-	delete mio;
+	if(mio != nullptr){
+		delete mio;
+	}
 }
 
 int mimi_error(MIMI_IO *mio)

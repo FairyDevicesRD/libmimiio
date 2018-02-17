@@ -244,6 +244,7 @@ AC_CONFIG_FILES([
  examples/mimiio_pa/Makefile
  examples/mimiio_tumbler/Makefile
  examples/mimiio_tumbler/mimiio_tumbler_ex1/Makefile
+ examples/mimiio_tumbler/mimiio_tumbler_ex2/Makefile
  doc/Makefile
  mimiio.pc
 ])
