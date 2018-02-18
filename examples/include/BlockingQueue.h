@@ -82,6 +82,19 @@ public:
     }
 
     /**
+     * @brief Pop from queue without timeout
+     * @param [out] value A value popped from the queue
+     * @return True if successfully popped, false if timed out.
+     */
+    void pop(T& value)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+    	condition_.wait(lock, [=]{ return !queue_.empty(); });
+        value = queue_.back();
+        queue_.pop_back();
+    }
+
+    /**
      * @brief Return size of container
      * @return The size of the container
      */
