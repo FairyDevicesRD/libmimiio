@@ -68,6 +68,7 @@ void UserProgram::task(
 			std::cout << "user program: led ring change (async)" << std::endl;
 			led_f = std::async(std::launch::async, [](std::atomic<bool>& led_rot_cont){
 					tumbler::LEDRing& ring = tumbler::LEDRing::getInstance();
+					ring.clearFrames();
 					tumbler::LED background(0,0,100);
 					for(int i=0;i<18;++i){
 						tumbler::Frame frame(background);
