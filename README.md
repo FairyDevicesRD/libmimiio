@@ -32,7 +32,8 @@ $ ./configure
 $ make
 $ sudo make install
 ``````````
-- gcc 5 以上を推奨します。
+- gcc 5 以上が必要です
+- autoreconf が古い場合 configure が通らない場合があります。その場合は autoreconf を更新してください。
 
 #### Fairy I/O Tumbler
 
@@ -55,7 +56,7 @@ CXX=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolcha
 $ make
 $ sudo make install
 ``````````
-- Apple LLVM version 8.1.0 (clang-802.0.42) 以上を推奨します。
+- Apple LLVM version 8.1.0 (clang-802.0.42) 以上が必要です
 
 #### Windows
 
