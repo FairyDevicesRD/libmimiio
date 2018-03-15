@@ -20,7 +20,7 @@ AM_CFLAGS = -g -O2 $(MIMIXFE_CPPFLAGS)
 AM_CXXFLAGS = -g -O2 $(MIMIXFE_CPPFLAGS) -std=c++11
 
 mimiio_tumbler_ex3_SOURCES = mimiio_tumbler_ex3.cpp user_program.cpp
-mimiio_tumbler_ex3_LDADD = $(MIMIIODIR)/.libs/libmimiio.a $(OS_SPECIFIC_LINKS) $(MIMIXFE_LDFLAGS) $(FLAC_LIBS) @POCO_LDFLAGS@ -lPocoNet -lPocoNetSSL -lPocoFoundation -lPocoJSON -lmimixfe -lpthread -ltumbler -lasound
+mimiio_tumbler_ex3_LDADD = $(MIMIIODIR)/.libs/libmimiio.a $(OS_SPECIFIC_LINKS) $(MIMIXFE_LDFLAGS) $(FLAC_LIBS) @POCO_LDFLAGS@ -lPocoNet -lPocoNetSSL -lPocoFoundation -lPocoJSON -lPocoXML -lPocoUtil -lPocoCrypto -lmimixfe -lpthread -ltumbler -lasound
 
 endif
 endif

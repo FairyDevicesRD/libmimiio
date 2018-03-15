@@ -19,6 +19,6 @@ AM_CFLAGS = -g -O3
 AM_CXXFLAGS = -g -O3 @POCO_CPPFLAGS@ -std=c++11
 
 mimiio_file_SOURCES = mimiio_file.cpp
-mimiio_file_LDADD = $(MIMIIODIR)/libmimiio.la $(OS_SPECIFIC_LINKS) $(FLAC_LIBS) @POCO_LDFLAGS@ -lPocoNet -lPocoNetSSL -lPocoFoundation -lPocoJSON
+mimiio_file_LDADD = $(MIMIIODIR)/libmimiio.la $(OS_SPECIFIC_LINKS) $(FLAC_LIBS) @POCO_LDFLAGS@ -lPocoNet -lPocoNetSSL -lPocoFoundation -lPocoJSON -lPocoCrypto -lPocoUtil -lPocoXML
 
 endif
