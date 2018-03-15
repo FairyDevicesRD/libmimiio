@@ -14,7 +14,7 @@ WebSocket (RFC6455) 通信を利用した mimi(R) WebSocket API Service を簡�
 
 #### 必須
 
-- Poco C++ libraries Complete Edition 1.8.1 以上。プレビルドライブラリは[こちら](https://github.com/FairyDevicesRD/tumbler.poco)に用意されています
+- Poco C++ libraries Complete Edition 1.8.1 以上。 簡単のため、Tumbler 向けのプレビルドライブラリは[こちら](https://github.com/FairyDevicesRD/tumbler.poco)、それ以外の一部の環境向けのプレビルドライブラリは[こちら](https://github.com/FairyDevicesRD/poco)に用意されています。
 - libflac++ 1.3.0 以上
 
 #### オプション
