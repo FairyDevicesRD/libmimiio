@@ -20,7 +20,7 @@ AM_CFLAGS = -g -O2 $(PORTAUDIO_CFLAGS)
 AM_CXXFLAGS = -g -O2 $(PORTAUDIO_CFLAGS) -std=c++11
 
 mimiio_pa_SOURCES = mimiio_pa.cpp
-mimiio_pa_LDADD = $(MIMIIODIR)/libmimiio.la $(OS_SPECIFIC_LINKS) $(PORTAUDIO_LIBS) $(FLAC_LIBS) @POCO_LDFLAGS@ -lPocoNet -lPocotNetSSL -lPocoFoundation -lPocoJSON -lPocoCrypto -lPocoXML -lPocoUtil
+mimiio_pa_LDADD = $(MIMIIODIR)/libmimiio.la $(OS_SPECIFIC_LINKS) $(PORTAUDIO_LIBS) $(FLAC_LIBS) @POCO_LDFLAGS@ -lPocoNet -lPocoNetSSL -lPocoFoundation -lPocoJSON -lPocoCrypto -lPocoXML -lPocoUtil
 
 endif
 
