@@ -14,13 +14,18 @@ WebSocket (RFC6455) 通信を利用した mimi(R) WebSocket API Service を簡�
 
 #### 必須
 
-- Poco C++ libraries Complete Edition 1.8.1 以上。プレビルドライブラリは[こちら](https://github.com/FairyDevicesRD/tumbler.poco)に用意されています
+- Poco C++ libraries Complete Edition 1.8.0 以上。 Tumbler 向けのプレビルドライブラリは[こちら](https://github.com/FairyDevicesRD/tumbler.poco)、それ以外の一部の環境向けのプレビルドライブラリは[こちら](https://github.com/FairyDevicesRD/poco)に用意されています。
+- pkg-config (configure 時。バージョン 0.29 で動作確認)
 - libflac++ 1.3.0 以上
 
 #### オプション
 
 - portaudio v19_2014 以上（mimiio_pa/ 以下のサンプルプログラムのビルドのためのみに用いられます）
 - libmimixfe 1.0 以上（mimiio_tumbler/ 以下のサンプルプログラムのビルドのためのみに用いられます）
+
+#### Poco プレビルドライブラリの依存ライブラリについて
+
+上記のプレビルドライブラリを用いる場合、Poco のビルドに必要な Poco が依存しているライブラリ群が環境中に含まれていない場合があります。その場合、libmimiio の configure に失敗するため、config.log を確認するなどして、Poco の依存ライブラリの有無を確認してください。
 
 ### ビルド
 
@@ -32,7 +37,8 @@ $ ./configure
 $ make
 $ sudo make install
 ``````````
-- gcc 5 以上を推奨します。
+- gcc 5 以上が必要です
+- autoreconf が古い場合 configure が通らない場合があります。その場合は autoreconf を更新してください。
 
 #### Fairy I/O Tumbler
 
@@ -44,7 +50,7 @@ $ sudo make install
 ``````````
 
 - libmimixfe の位置をマニュアルで指定する必要があります
-- `./configure` の代わりに、`./configure-tumbler` を利用することでより最適化されたバイナリが生成できますが、`./configure-tumbler` の内容をご確認の上、ご利用ください。
+- `configure` の代わりに、`configure-tumbler` を利用することで、より最適化されたバイナリが生成できます。このスクリプトは、内部的に `configure` を呼び出しており、ビルド時の各種オプションを設定する簡易的なスクリプトです。 発展的な内容を含むため、スクリプトの内容を理解した上でご利用ください。 libmimiio は通信プログラムであるため、この最適化による効果は大きくはありません。
 
 #### Mac OS X
 
@@ -55,7 +61,7 @@ CXX=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolcha
 $ make
 $ sudo make install
 ``````````
-- Apple LLVM version 8.1.0 (clang-802.0.42) 以上を推奨します。
+- Apple LLVM version 8.1.0 (clang-802.0.42) 以上が必要です
 
 #### Windows
 
@@ -73,6 +79,12 @@ mingw, cygwin 等を利用し、Linux に準じて適宜ビルドしてくださ
 ## サンプルプログラム
 
 本レポジトリの [examples/](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples) 以下を参照してください。サンプルプログラムの一部は、依存ライブラリの有無によって、ビルドされない場合があります。
+
+実行にあたって、 libmimiio がインストールされたディレクトリを共有ライブラリ検索パスに加える必要がある場合があります。例：
+
+```
+LD_LIBRARY_PATH=/usr/local/lib /usr/local/bin/mimiio_file
+```
 
 doxygen を利用することで、本ライブラリの実装に対して自動生成ドキュメントを生成することができます。
 
