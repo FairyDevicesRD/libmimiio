@@ -65,22 +65,50 @@ public:
         condition_.notify_one();
     }
 
-    T& front(std::chrono::microseconds timeout)
+    T& front()
     {
     	std::unique_lock<std::mutex> lock(mutex_);
-    	if(!condition_.wait_for(lock, timeout, [=]{ !queue_.empty(); })){
+    	condition_.wait(lock, [&]{ return !queue_.empty(); });
+    	return queue_.front();
+    }
+
+    T& front(std::chrono::milliseconds timeout)
+    {
+    	std::unique_lock<std::mutex> lock(mutex_);
+    	if(!condition_.wait_for(lock, timeout, [=]{ return !queue_.empty(); })){
     		throw std::runtime_error("queue.front() time out");
     	}
     	return queue_.front();
     }
 
-    T& back(std::chrono::microseconds timeout)
+    T& back()
     {
     	std::unique_lock<std::mutex> lock(mutex_);
-    	if(!condition_.wait_for(lock, timeout, [=]{ !queue_.empty(); })){
+    	condition_.wait(lock, [&]{ return !queue_.empty(); });
+    	return queue_.back();
+    }
+
+    T& back(std::chrono::milliseconds timeout)
+    {
+    	std::unique_lock<std::mutex> lock(mutex_);
+    	if(!condition_.wait_for(lock, timeout, [=]{ return !queue_.empty(); })){
     		throw std::runtime_error("queue.back() time out");
     	}
     	return queue_.back();
+    }
+
+    /**
+     * @brief Pop from queue without timeout
+     * @param [out] value A value popped from the queue
+     * @param [in] timeout Timeout for pop
+     * @return True if successfully popped, false if timed out.
+     */
+    void pop_back(T& value)
+    {
+        std::unique_lock<std::mutex> lock(mutex_);
+    	condition_.wait(lock, [&]{ return !queue_.empty(); });
+        value = queue_.back();
+        queue_.pop_back();
     }
 
     /**
@@ -104,6 +132,9 @@ public:
      * @return The size of the container
      */
     int size() const { return queue_.size(); }
+
+    const T& operator[](std::size_t i) const { return queue_.at(i); }
+    T& operator[](std::size_t i){ return queue_.at(i); }
 
 private:
     std::mutex mutex_;

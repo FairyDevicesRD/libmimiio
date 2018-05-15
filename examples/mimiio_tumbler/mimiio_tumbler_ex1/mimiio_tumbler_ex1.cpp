@@ -96,7 +96,7 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, voi
 	auto current_queue_size = queue->size();
 	int length = 0;
 	std::vector<short> tmp;
-	for(auto i=0;i<current_queue_size;i+=2){
+	for(auto i=0;i<current_queue_size;++i){
 		short sample = 0;
 		if(queue->pop(sample, timeout)){
 			tmp.push_back(sample);
@@ -187,6 +187,8 @@ int main(int argc, char** argv)
         p.add<int>("rate", '\0', "Sampling rate", false, 16000);
         p.add<int>("channel", '\0', "Number of channels", false, 1);
         p.add<std::string>("format", '\0', "Audio format", false, "MIMIIO_RAW_PCM");
+        p.add<std::string>("lang",'\0',"Language code", false, "ja");
+        p.add<std::string>("services",'\0',"mimi services", false, "asr");
         p.add("verbose", '\0', "Verbose mode");
         p.add("help", '\0', "Show help");
         if (!p.parse(argc, argv)) {
@@ -238,8 +240,13 @@ int main(int argc, char** argv)
 		 }
 
 		 // Prepare mimi runtime configuration
-		 size_t header_size = 0;
-		 MIMIIO_HTTP_REQUEST_HEADER *h = nullptr;
+		 size_t header_size = 2;
+		 MIMIIO_HTTP_REQUEST_HEADER h[2];
+
+		 strcpy(h[0].key,"x-mimi-input-language");
+		 strcpy(h[0].value,p.get<std::string>("lang").c_str());
+		 strcpy(h[1].key,"x-mimi-process");
+		 strcpy(h[1].value,p.get<std::string>("services").c_str());
 
 		 // Open mimi stream
 		 int errorno = 0;

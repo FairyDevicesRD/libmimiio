@@ -26,12 +26,22 @@
 
 #include "../../include/cmdline/cmdline.h"
 #include "../../include/BlockingQueue.h"
-#include "user_program.h"
+#include "class/Stream.h"
+#include "class/SpeechEvent.h"
+#include "class/SpeechEventStack.h"
 
 #include <tumbler/speaker.h>
+#include <tumbler/ledring.h>
 #include <mimiio.h>
 #include <XFERecorder.h>
+
+#include <Poco/JSON/JSON.h>
+#include <Poco/JSON/Parser.h>
+#include <Poco/JSON/ParseHandler.h>
+#include <Poco/Dynamic/Var.h>
+
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <cstring>
 #include <vector>
@@ -46,217 +56,153 @@ volatile sig_atomic_t interrupt_flag_ = 0;
 void sig_handler_(int signum){ interrupt_flag_ = 1; }
 
 /**
- * @class TxStreamData
- * @brief User defined data for txfunc
+ * @class MySpeechEvent
+ * @brief SpeechEvent クラスをオーバーライドして実装し、発話に関する各種のイベント発生時の処理を定義する。別発話発生時は別のインスタンスが並列に呼ばれ、
+ * インスタンス間はリンクトリスト構造によりつながっている。
  */
-class TxStreamData
+class MySpeechEvent : public SpeechEvent
 {
 public:
-	TxStreamData() : recog_break_(false) {}
-	SampleQueue queue_; //!< Audio data from libmimixfe
-	std::atomic<bool> recog_break_; //!< recog-break flag for libmimiio
-};
-
-/**
- * @class RxStreamData
- * @brief User defined data for rxfunc
- */
-class RxStreamData{
-public:
-	RxStreamData() {}
-	BlockingQueue<std::string> recog_result_; // !< Recognition result from remote-host
-	std::atomic<mimixfe::SpeechState> speech_state_; // !< Speech state estimation result from libmimixfe
-};
-
-/**
- * \~english
- * @brief Callback function for sending audio
- * @attention The maximum size of \e len is limited to 32kib according to mimi(R) WebSocket API service specification.
- * @note A new thread created by libmimiio processes this callback function. Note that this function is NOT processed on main thread.
- * @attention \e txfunc_error must be negative value to avoid overlapping of libmimio's internal error codes.
- * @param [out] buffer Audio data to be sent
- * @param [out] len The size of audio data stored in \e buffer, which is limited to 32kib.
- * @param [out] recog_break If true, <em> break command </em> to be sent.
- * @param [out] txfunc_error User defined error code. Set negative value when an error occurred in this callback function.
- * @param [in,out] userdata User defined data.
- *
- * \~japanese
- * @brief 音声データを送信するためのユーザー定義コールバック関数. libmimiio から定期的に呼ばれる。
- * @attention 仕様書記載の通り、音声データの最大チャンクサイズは 32 KB
- * @note このコールバック関数は、libmimiio が準備するスレッドから呼び出され、そのスレッドは libmimiio が初期化されるスレッドとは異なることに留意する。
- * @attention  \e txfunc_error に入れるユーザー定義エラーは、libmimiio の内部エラーコードと重複しないようにマイナスの値を利用することを推奨
- * @param [out] buffer libmimiio によってサーバーに送信される音声データ
- * @param [out] len 上記バッファの長さ. 最大 32 KB
- * @param [out] recog_break 音声送信を終了し、サーバーから最終結果を得るときに true を渡す。true が渡されると、二度と txfunc は呼ばれない。
- * @param [out] txfunc_error ユーザー定義エラーコード。このコールバック関数内でエラーが発生し、かつ、libmimiio に対してサーバーへの通信路を切断したいときに 0 以外の数値を書き込む。
- * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
- * @param [in,out] userdata 任意のユーザー定義データ
- */
-void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, void* userdata)
-{
-	std::chrono::milliseconds timeout(1000); // queue timeout
-	TxStreamData* sdata = static_cast<TxStreamData*>(userdata);
-	*recog_break = sdata->recog_break_.load();
-	auto current_queue_size = sdata->queue_.size();
-	int length = 0;
-	std::vector<short> tmp;
-	for(auto i=0;i<current_queue_size;i+=2){
-		short sample = 0;
-		if(sdata->queue_.pop(sample, timeout)){
-			tmp.push_back(sample);
-		    length += 2;
-		}else{
-			*txfunc_error = -100; // Timeout for pop from queue.
-			break;
-		}
-	}
-	*len = length;
-	std::memcpy(buffer, &tmp[0], tmp.size()*2);
-}
-
-/**
- * \~english
- * @brief Callback function for receiving results
- * @note A new thread created by libmimiio processes this callback function. Note that this function is NOT processed on main thread.
- * @attention \e rxfunc_error must be negative value to avoid overlapping of libmimio's internal error codes.
- * @param [in] result The result received from mimi(R) remote host. The result is NULL terminated when the result is text, otherwise not NULL terminated.
- * @param [in] len The size of \e result.
- * @param [out] rxfunc_error User defined error code Set negative value when an error occurred in this callback function.
- * @param [in,out] userdata User defined data
- *
- * \~japanese
- * @brief サーバーからデータを受信する都度 libmimiio から呼ばれるユーザー定義コールバック関数
- * @note このコールバック関数は、libmimiio が準備するスレッドから呼び出され、そのスレッドは libmimiio が初期化されるスレッドとは異なることに留意する。
- * @attention  \e rxfunc_error に入れるユーザー定義エラーは、libmimiio の内部エラーコードと重複しないようにマイナスの値を利用することを推奨
- * @param [in] result サーバーから受信した内容。文字列の場合は C 言語形式の NULL 終端文字列。
- * @param [in] size_t len 上記の長さ
- * @param [out] rxfunc_error ユーザー定義エラーコード。このコールバック関数内でエラーが発生し、かつ、libmimiio に対してサーバーへの通信路を切断したいときに 0 以外の数値を書き込む。
- * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
- * @param [in,out] userdata 任意のユーザー定義データ
- */
-void rxfunc(const char* result, size_t len, int* rxfunc_error, void *userdata)
-{
-	RxStreamData* rdata = static_cast<RxStreamData*>(userdata);
-	std::string s(result, len);
-	rdata->recog_result_.push(s);
-	std::cout << s << std::endl;
-}
-
-/**
- * @class Session
- * @brief ひとつの発話に対応する音声データ、リモートホストへの接続等の一式を管理する
- */
-class Session
-{
-public:
-	class ConnectionParam
+	MySpeechEvent()
 	{
-	public:
-		ConnectionParam(
-				const std::string& host, int port, const char* token,
-				int rate, int channel, MIMIIO_AUDIO_FORMAT af, bool verbose) :
-					host_(host), port_(port), token_(token), rate_(rate), channel_(channel), af_(af), verbose_(verbose) {}
-		const std::string host_;
-		const int port_;
-		const char* token_;
-		int rate_;
-		int channel_;
-		bool verbose_;
-		MIMIIO_AUDIO_FORMAT af_;
-		std::vector<MIMIIO_HTTP_REQUEST_HEADER> header_;
-	};
-
-	Session(const ConnectionParam& param) : param_(param)
-	{
-		// Read audio file for audio sign
-		std::ifstream inputfs("data/se1.raw", std::ios::in|std::ios::binary|std::ios::ate);
-		if(!inputfs.is_open()){
-			throw std::runtime_error("FileReader: Could not open file");
+		if(se1_.size() == 0){
+			// 効果音のロード
+			std::ifstream inputfs("data/se1.raw", std::ios::in|std::ios::binary|std::ios::ate);
+			if(!inputfs.is_open()){
+				throw std::runtime_error("MySpeechEvent: Could not open file data/se1.raw");
+			}
+			size_t inputsize = inputfs.tellg();
+			se1_.resize(inputsize/2);
+			inputfs.seekg(0, std::ios::beg);
+			inputfs.read(reinterpret_cast<char*>(&se1_[0]),inputsize);
+			inputfs.close();
 		}
-		size_t inputsize = inputfs.tellg();
-		se1_.resize(inputsize/2);
-		inputfs.seekg(0, std::ios::beg);
-		inputfs.read(reinterpret_cast<char*>(&se1_[0]),inputsize);
-		inputfs.close();
-	}
-	~Session(){ if(mio_ != nullptr) mimi_close(mio_); }
 
-	/**
-	 * @brief Open stream to remote host.
-	 * @return true if successfully opened the stream.
-	 */
-	bool open()
-	{
-		if(mio_ != nullptr){
-			close();
-		}
-		int retry = 0;
-		while(retry++ < mimi_open_retry_){
-			int errorno = 0;
-			mio_ = mimi_open(
-					param_.host_.c_str(), param_.port_, txfunc, rxfunc,
-					static_cast<void*>(&sdata_), static_cast<void*>(&rdata_), param_.af_, param_.rate_, param_.channel_,
-					param_.header_.data(), param_.header_.size(), param_.token_, MIMIIO_LOG_DEBUG, &errorno);
-			if(mio_ == nullptr){
-				std::cerr << "Could not open mimi(R) API service. mimi_open() failed: "
-						<< mimi_strerror(errorno) << " (" << errorno << "), retry = " << retry << std::endl;
-			}else{
-				if(param_.verbose_){
-					 std::cerr << "mimi connection is successfully opened." << std::endl;
-				}
-				return true;
+		// LED リングの点灯パターンの初期化
+		led_control_ = true; // LED リングの制御権を与える
+		if(pt1_.size() == 0){
+			tumbler::LED background(0,0,100);
+			pt1_.resize(18);
+			for(int i=0;i<18;++i){
+				tumbler::Frame frame(background);
+				frame.setLED(i, tumbler::LED(0,255,0));
+				pt1_[i] = frame;
 			}
 		}
-		// 接続が複数回失敗した場合は失敗とする
-		return false;
 	}
 
 	/**
-	 * @brief Start the stream to remote host.
-	 * @return true if successfully start the stream.
+	 * @brief 発話開始検出された時点で呼び出される関数
+	 * @param [in] sourceId libmimixfe で定義される sourceId
+	 * @param [in] streamInfo libmimixfe で定義される音声ストリーム情報
+	 * @details 発話開始検出された時点で 1 回のみ呼び出される
 	 */
-	bool start()
+	virtual void speechStartHandler(int sourceId, const std::vector<mimixfe::StreamInfo>& streamInfo) override
 	{
-		 int errorno = mimi_start(mio_);
-		 if(errorno != 0){
-			 std::cerr << "Could not start mimi(R) service. mimi_start() filed. See syslog in detail.\n";
-			 mimi_close(mio_);
-			 return false;
-		 }
-		 if (param_.verbose_) {
-			 std::cerr << "mimi connection is successfully started, decoding starts..." << std::endl;
-		 }
-		 return true;
+		std::cout << "SPEECH START" << std::endl;
+
+		if(prev_ != nullptr){
+			// 新たに発話検出された場合は、１つ前の発話イベントに対して LED 制御権を放棄させる
+			// LED リングの制御クラスを別途設けることで、そちらに情報を集約しても良いが、ここでは１つ前の発話イベントを利用する例として示した。
+			static_cast<MySpeechEvent*>(prev_)->releaseLEDRingControl();
+		}
 	}
 
-	void close()
+	/**
+	 * @brief 発話中に一定時間ごとに呼び出される関数
+	 * @param [in] sourceId libmimixfe で定義される sourceId
+	 * @param [in] streamInfo libmimixfe で定義される音声ストリーム情報
+	 * @details libmimixfe の録音コールバック関数が発話中ステートで呼び出される都度、この関数も呼び出される
+	 */
+	virtual void inSpeechHandler(int sourceId, const std::vector<mimixfe::StreamInfo>& streamInfo) override
 	{
-		while(mimi_is_active(mio_)){
-			usleep(1000000);
-		}
-		int errorno = mimi_error(mio_);
-		if(errorno == -100){ // user defined.
-			std::cerr << "An error occurred in mimii_tumbler_ex2, timed out for pop from queue." << std::endl;
-		}else if(errorno > 0){ //libmimiio internal error code
-			std::cerr << "An error occurred in mimiio: " << mimi_strerror(errorno) << "(" << errorno << ")" << std::endl;
-		}
-		mimi_close(mio_);
-		if (param_.verbose_) {
-			std::cerr << "mimi connection is closed." << std::endl;
-		}
-		mio_ = nullptr;
-		sdata_.recog_break_.store(false);
+		std::cout << "IN SPEECH" << std::endl;
 	}
 
-	TxStreamData sdata_; //!< User defined data for audio transfer callback function for libmimiio
-	RxStreamData rdata_; //!< User defined data for result receiving callback function for libmimiio
-	std::vector<short> se1_;
+	/**
+	 * @brief 発話終了検出された時点で呼び出される関数
+	 * @param [in] sourceId libmimixfe で定義される sourceId
+	 * @param [in] streamInfo libmimixfe で定義される音声ストリーム情報
+	 * @details 発話終了検出された時点で 1 回のみ呼び出される
+	 */
+	virtual void speechEndHandler(int sourceId, const std::vector<mimixfe::StreamInfo>& streamInfo) override
+	{
+		std::cout << "SPEECH END" << std::endl;
+
+		// 発話終了検出時に音声サインを再生し、LED リングの点灯状態を変える例
+		// 1. 音声再生（非同期）
+		tumbler::Speaker& spk = tumbler::Speaker::getInstance();
+		spk.batchPlay(se1_, 44100, 0.05, tumbler::Speaker::PlayBackMode::normal_);
+
+		// 2. LED リングの点灯状態の変更
+		led_s_ = true;
+		led_f_ = std::async(std::launch::async, [&]{
+				tumbler::LEDRing& ring = tumbler::LEDRing::getInstance();
+				ring.clearFrames();
+				ring.setFPS(30);
+				ring.setFrames(pt1_);
+				while(led_s_.load() && led_control_.load()){
+					ring.show(false);
+				}
+		});
+	}
+
+	/**
+	 * @brief libmimiio によってリモートホスト側から何らかの応答を受信する都度呼び出される関数
+	 * @param [in] sourceId libmimixfe で定義される sourceId
+	 * @param [in] response リモートホストからの応答内容文字列、典型的には JSON 文字列となる
+	 * @details libmimiio の受信コールバック関数が呼び出される都度、この関数が呼び出される
+	 */
+	virtual void responseHandler(int sourceId, const std::string& response) override
+	{
+		//応答結果の JSON を解析し、最終認識結果を受信した時点から、何らかのユーザー処理を想定して 3 秒待ち、LED リングの点灯状態を元に戻す例
+		Poco::JSON::Parser parser;
+		Poco::DynamicStruct dsresult = *(parser.parse(response).extract<Poco::JSON::Object::Ptr>());
+		auto response_size = dsresult["response"].size();
+		std::stringstream s; // JSON の result フィールドの情報を抜き出したもの
+		for(auto i=0;i<response_size;++i){
+			s << dsresult["response"][i]["result"].toString();
+		}
+		if(dsresult["status"] == "recog-finished"){
+			std::cout << "RESPONSE(FINAL): " << s.str() << std::endl;
+
+			//// ここで最終確定結果を利用して何かをする想定 ////
+			sleep(3); // 何かをするのに掛かった時間（実際に 3 秒は UX 上時間が掛かりすぎでありダメだが、サンプルの動きの分かりやすさのために長くしたもの）
+			///////////////////////////////////////////////
+
+			led_s_ = false;
+			led_f_.get();
+			if(led_control_.load()){ // 上記の 3 秒の間に、次の発話が行われている場合があり、その場合、次の発話イベント側で LED リングが制御される
+				tumbler::LEDRing& ring = tumbler::LEDRing::getInstance();
+				ring.reset(true); // LED リングの点灯状態をデフォルト状態に戻す
+			}
+		}else{
+			std::cout << "RESPONSE: " << s.str() << std::endl;
+		}
+	}
+
+	/**
+	 * @brief libmimixfe, libmimiio, 本サンプルプログラム内部のどちらかで何らかの継続不可能なエラーが起こった場合に呼び出される関数
+	 * @param [in[ errorno エラー番号
+	 */
+	virtual void errorHandler(int errorno) override{}
+
+	/**
+	 * @brief このイベントクラスに LED 制御権を放棄させる
+	 */
+	void releaseLEDRingControl(){ led_control_ = false; }
 
 private:
-	const ConnectionParam& param_;
-	MIMI_IO *mio_ = nullptr;
-	const int mimi_open_retry_ = 3;
+	static std::vector<short> se1_; // 効果音 #1
+	static std::vector<tumbler::Frame> pt1_; // LEDリングの点灯パターン #1
+
+	std::future<void> led_f_;
+	std::atomic<bool> led_s_;
+	std::atomic<bool> led_control_;
 };
+
+std::vector<short> MySpeechEvent::se1_;
+std::vector<tumbler::Frame> MySpeechEvent::pt1_;
 
 /**
  * \~english
@@ -272,22 +218,9 @@ void recorderCallback(
 		mimixfe::StreamInfo* info,
 		size_t infolen,
 		void* userdata
-){
-	Session* session = reinterpret_cast<Session*>(userdata);
-	for(size_t i=0;i<buflen;++i){
-		session->sdata_.queue_.push(buffer[i]);
-	}
-	session->rdata_.speech_state_.store(state);
-	if(state == mimixfe::SpeechState::SpeechStart){
-		session->open();
-		session->start();
-	}else if(state == mimixfe::SpeechState::SpeechEnd){
-		session->sdata_.recog_break_.store(true);
-		// 音声サイン
-		std::cout << "user program: play audio sign (async)" << std::endl;
-		tumbler::Speaker& spk = tumbler::Speaker::getInstance();
-		spk.batchPlay(session->se1_, 44100, 0.05, tumbler::Speaker::PlayBackMode::normal_); // async
-	}
+)
+{
+	static_cast<SpeechEventStack<MySpeechEvent>*>(userdata)->push(buffer, buflen, state, sourceId, info, infolen);
 }
 
 // 送信音声形式をコマンドライン引数から指定するための実装例
@@ -342,6 +275,9 @@ int main(int argc, char** argv)
         p.add<int>("channel", '\0', "Number of channels", false, 1);
         p.add<std::string>("format", '\0', "Audio format", false, "MIMIIO_RAW_PCM");
         p.add("verbose", '\0', "Verbose mode");
+        p.add("enable-spcn", '\0', "Enable speculative connection");
+        p.add<std::string>("lang",'\0',"Language code", false, "ja");
+        p.add<std::string>("services",'\0',"mimi services", false, "asr");
         p.add("help", '\0', "Show help");
         if (!p.parse(argc, argv)) {
             std::cout << p.error_full() << std::endl;
@@ -353,7 +289,7 @@ int main(int argc, char** argv)
             return 0;
         }
     }
-
+    
     const char *access_token = nullptr;
     if (p.exist("token")) {
         access_token = p.get<std::string>("token").c_str();
@@ -368,19 +304,21 @@ int main(int argc, char** argv)
 
 	try{
 
+		// Set connection params with using command line params.
+	    Stream::ConnectionParam param(p.get<std::string>("host"), p.get<int>("port"), access_token,
+	    		p.get<int>("rate"), p.get<int>("channel"), af, p.exist("verbose"), p.get<std::string>("lang"), p.get<std::string>("services"), p.exist("enable-spcn"));
+	    // Create event stack
+	    SpeechEventStack<MySpeechEvent> eventStack(param);
 		// Initialize mimixfe
-	    Session::ConnectionParam param(p.get<std::string>("host"), p.get<int>("port"), access_token,
-	    		p.get<int>("rate"), p.get<int>("channel"), af, p.exist("verbose"));
-	    Session session(param);
 	    int xfe_errorno = 0;
 	    mimixfe::XFESourceConfig s;
 	    mimixfe::XFEECConfig e;
 	    mimixfe::XFEVADConfig v;
 	    mimixfe::XFEBeamformerConfig b;
 	    mimixfe::XFEStaticLocalizerConfig c({mimixfe::Direction(270, 90)});
-	    mimixfe::XFERecorder rec(s,e,v,b,c,recorderCallback,reinterpret_cast<void*>(&session));
+	    mimixfe::XFERecorder rec(s,e,v,b,c,recorderCallback,reinterpret_cast<void*>(&eventStack));
 	    rec.setLogLevel(LOG_UPTO(LOG_DEBUG));
-	    if(signal(SIGINT, sig_handler_) == SIG_ERR){
+	    if(signal(SIGINT, sig_handler_) == SIG_ERR){ // For backward compatibility
 	    	return 1;
 		}
 	    if(p.exist("verbose")){
@@ -392,21 +330,17 @@ int main(int argc, char** argv)
 	    	std::cerr << "XFE recording stream is successfully started." << std::endl;
 	    	std::cerr << "[[ YOU CAN SPEAK NOW ]]" << std::endl;
 		}
-
-	    // User program start
-	    UserProgram upr(session.rdata_.recog_result_, session.rdata_.speech_state_);
-	    upr.start();
-
+	    // Loop for monitoring
 	    int usec = 100000; // 0.1sec, you should choose appropriate value
 	    while(rec.isActive()){
+			 usleep(usec);
 			 if(interrupt_flag_ != 0){
 				 if (p.exist("verbose")) {
 					 std::cerr << "Stream is to be finished..." << std::endl;
 				 }
-				 rec.stop();
-				 session.close();
+				 rec.stop(); // Ensure new sessions will never be created
+				 eventStack.abort(); // Abort if any sessions exist in the queue, no sessions might be in the queue in typical cases.
 			 }
-			 usleep(usec);
 		 }
 		 if(xfe_errorno != 0){
 			 std::cerr << "An error occurred in mimixfe (" << xfe_errorno << ")" << std::endl;

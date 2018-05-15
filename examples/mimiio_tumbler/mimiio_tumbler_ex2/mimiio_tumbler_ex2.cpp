@@ -84,7 +84,7 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, voi
 	auto current_queue_size = sdata->queue_.size();
 	int length = 0;
 	std::vector<short> tmp;
-	for(auto i=0;i<current_queue_size;i+=2){
+	for(auto i=0;i<current_queue_size;++i){
 		short sample = 0;
 		if(sdata->queue_.pop(sample, timeout)){
 			tmp.push_back(sample);
@@ -316,6 +316,8 @@ int main(int argc, char** argv)
         p.add<int>("rate", '\0', "Sampling rate", false, 16000);
         p.add<int>("channel", '\0', "Number of channels", false, 1);
         p.add<std::string>("format", '\0', "Audio format", false, "MIMIIO_RAW_PCM");
+        p.add<std::string>("lang",'\0',"Language code", false, "ja");
+        p.add<std::string>("services",'\0',"mimi services", false, "asr");
         p.add("verbose", '\0', "Verbose mode");
         p.add("help", '\0', "Show help");
         if (!p.parse(argc, argv)) {
@@ -346,6 +348,18 @@ int main(int argc, char** argv)
 		// Initialize mimixfe
 	    Session::ConnectionParam param(p.get<std::string>("host"), p.get<int>("port"), access_token,
 	    		p.get<int>("rate"), p.get<int>("channel"), af, p.exist("verbose"));
+	    
+	    std::vector<MIMIIO_HTTP_REQUEST_HEADER> hs;
+	    MIMIIO_HTTP_REQUEST_HEADER h;
+	    strcpy(h.key,"x-mimi-input-language");
+	    strcpy(h.value,p.get<std::string>("lang").c_str());
+	    hs.push_back(h);
+	    MIMIIO_HTTP_REQUEST_HEADER h1;
+	    strcpy(h1.key,"x-mimi-process");
+	    strcpy(h1.value,p.get<std::string>("services").c_str());
+	    hs.push_back(h1);
+	    param.header_ = hs;
+	    
 	    Session session(param);
 	    int xfe_errorno = 0;
 	    mimixfe::XFESourceConfig s;
