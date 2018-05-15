@@ -36,10 +36,4 @@ ex1 と同様ですが、ibmimixfe の VAD の結果を利用し、発話毎に�
 
 #### [mimiio_tumbler_ex3](https://github.com/FairyDevicesRD/libmimiio/tree/master/examples/mimiio_tumbler/mimiio_tumbler_ex3)
 
-ex2 と同様ですが、ユーザープログラムと結合する一例と、発話終了検出時の音声サインの再生及び、認識結果を利用した何らかの処理を行う場合において、LED リングの光り方を変える一例を紹介しています。簡易的な設計ですが、より実用的なサンプルプログラムとなっています。
-
-#### mimiio_tumbler_ex4
-
-※以下準備中です
-
-Fairy I/O Tumbler 上で、[libmimixfe](https://github.com/FairyDevicesRD/libmimixfe)と組み合わせ、録音及び信号処理された音声を入力として、リアルタイムでサーバーに送信し、リアルタイムでサーバーから認識結果を受信する libmimixfe の機能制限のないサンプルプログラムであり、N 個の同時抽出音源に対し、N 本の WebSocket 通信路を確立し、同時認識を行います。
+Fairy I/O Tumbler 上で、[libmimixfe](https://github.com/FairyDevicesRD/libmimixfe)と組み合わせ、録音及び信号処理された音声を入力として、リアルタイムでサーバーに送信し、リアルタイムでサーバーから認識結果を受信する libmimixfe の機能制限のないサンプルプログラムであり、N 個の同時抽出音源に対し、N 本の WebSocket 通信路を確立し、同時認識を行います。従来のサンプルプログラムを統合しました。

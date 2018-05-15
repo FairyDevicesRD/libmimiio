@@ -97,12 +97,12 @@ public:
 
 protected:
 	SpeechEvent* prev_;
+	void finish();
 
 private:
 	// SpeechEventStack がフレンドクラスとなっていることに留意
 	bool isFinished() { return !eventLoopContinue_.load(); }
 	void start();
-	void finish();
 	std::future<void> eventLoop_;
 	std::atomic<bool> eventLoopContinue_;
 	Stream::Ptr stream_;

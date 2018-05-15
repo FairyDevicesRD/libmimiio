@@ -176,6 +176,8 @@ public:
 				tumbler::LEDRing& ring = tumbler::LEDRing::getInstance();
 				ring.reset(true); // LED リングの点灯状態をデフォルト状態に戻す
 			}
+
+			finish(); // ユーザー定義処理が終了したことを伝える
 		}else{
 			std::cout << "RESPONSE: " << s.str() << std::endl;
 		}

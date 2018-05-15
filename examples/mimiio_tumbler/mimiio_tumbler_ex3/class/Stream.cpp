@@ -118,7 +118,7 @@ void Stream::open()
 	});
 
 	connection_monitor_ = std::async(std::launch::async, [&]{
-		sleep(10);
+		sleep(60);
 		{
 			std::unique_lock<std::mutex>(mutex_);
 			if(state_.load() == Stream::Status::connected){
