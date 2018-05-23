@@ -50,8 +50,8 @@ AC_DEFUN([AX_POCO_BASE],
     ORIGINAL_CPPFLAGS="$CPPFLAGS"
 
     dnl Poco version and edition check
-    CPPFLAGS="-I$POCO_PREFIX/include"
-    LDFLAGS="-L$POCO_PREFIX/lib"
+    CPPFLAGS="-I$POCO_PREFIX/include $ORIGINAL_CPPFLAGS"
+    LDFLAGS="-L$POCO_PREFIX/lib $ORIGINAL_LDFLAGS"
     AC_LANG_PUSH([C++])
     LIBS="-lPocoFoundation -lPocoNetSSL -pthread"
     AC_LINK_IFELSE(

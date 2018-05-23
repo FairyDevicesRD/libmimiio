@@ -205,8 +205,10 @@ int main(int argc, char **argv) {
 
     // Prepare mimi runtime configuration
     int errorno = 0;
-    size_t header_size = 0;
-    MIMIIO_HTTP_REQUEST_HEADER *h = nullptr;
+    size_t header_size = 1;
+    MIMIIO_HTTP_REQUEST_HEADER h[header_size];
+    strcpy(h[0].key, "x-mimi-process");
+    strcpy(h[0].value, "asr");
 
     // Open mimi stream
     MIMI_IO *mio = mimi_open(
@@ -260,6 +262,5 @@ int main(int argc, char **argv) {
         fprintf(stderr, "Connection is closed.\n");
     }
     fclose(inputfile_);
-    free(h);
     return 0;
 }
