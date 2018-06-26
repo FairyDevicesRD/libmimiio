@@ -286,8 +286,10 @@ int main(int argc, char** argv)
 	}
 
     // Prepare mimi runtime configuration
-    size_t header_size = 0;
-    MIMIIO_HTTP_REQUEST_HEADER *h = nullptr;
+    size_t header_size = 1;
+    MIMIIO_HTTP_REQUEST_HEADER h[header_size];
+    strcpy(h[0].key, "x-mimi-process");
+    strcpy(h[0].value, "asr");
 
 	// Open mimi stream
 	int errorno = 0;
