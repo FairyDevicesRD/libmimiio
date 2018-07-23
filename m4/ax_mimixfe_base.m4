@@ -40,13 +40,13 @@ AC_DEFUN([AX_MIMIXFE_BASE],
     FOUND_MIMIXFE_HEADER=0
     if test "$MIMIXFE_PREFIX" = ""; then
         for MIMIXFE_PREFIX_TMP in /usr /usr/local /opt /opt/local ; do
-	    if test -e "$MIMIXFE_PREFIX_TMP/include/XFERecorder.h" ; then
+	    if test -e "$MIMIXFE_PREFIX_TMP/include/mimixfe/XFERecorder.h" ; then
 	       MIMIXFE_PREFIX="$MIMIXFE_PREFIX_TMP"
 	       FOUND_MIMIXFE_HEADER=1
 	    fi
 	done
     else
-	if test -e "$MIMIXFE_PREFIX/include/XFERecorder.h"; then
+	if test -e "$MIMIXFE_PREFIX/include/mimixfe/XFERecorder.h"; then
 	   FOUND_MIMIXFE_HEADER=1
 	fi
     fi
@@ -54,7 +54,7 @@ AC_DEFUN([AX_MIMIXFE_BASE],
     if test $FOUND_MIMIXFE_HEADER -eq "1" ; then
         AC_MSG_RESULT([yes])
         AC_SUBST([MIMIXFE_LDFLAGS], [-L$MIMIXFE_PREFIX/lib])
-        AC_SUBST([MIMIXFE_CPPFLAGS], [-I$MIMIXFE_PREFIX/include])
+        AC_SUBST([MIMIXFE_CPPFLAGS], [-I$MIMIXFE_PREFIX/include/mimixfe])
 	AC_SUBST([MIMIXFE_PREFIX], [$MIMIXFE_PREFIX])
         ifelse([$1], [], :, [$1])
     else
