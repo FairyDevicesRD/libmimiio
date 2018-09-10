@@ -9,6 +9,7 @@
 #define LIBMIMIIO_MIMIIOIMPL_HPP__
 
 #include "mimiio.h"
+#include <Poco/Net/HTTPSClientSession.h>
 #include <Poco/Net/PrivateKeyPassphraseHandler.h>
 #include <Poco/Net/InvalidCertificateHandler.h>
 #include <Poco/Net/SSLException.h>
@@ -169,6 +170,8 @@ private:
 	void send_command(const std::string& command);
 
 	int send_frame(const std::string& data);
+
+	void set_proxysettings(Poco::Net::HTTPClientSession* session);
 
 	//for reconnection
 	const std::string hostname_;

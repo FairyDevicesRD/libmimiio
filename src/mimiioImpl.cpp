@@ -72,7 +72,11 @@ mimiioImpl::mimiioImpl(const std::string& hostname,
 
     //Prepare HTTP Session
     Poco::Net::HTTPSClientSession session(hostname_, port_, ptrContext);
-    Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, "/");
+
+    // Proxy Settings
+    set_proxysettings(&session);
+
+    Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, "/", Poco::Net::HTTPMessage::HTTP_1_1);
     Poco::Net::OAuth20Credentials oauth(accessToken);
     Poco::Net::HTTPResponse response;
 	Poco::Timespan timeout_connect(mimiio::socket_connect_timeout_sec_,0); // set connection timeout
@@ -113,7 +117,11 @@ mimiioImpl::mimiioImpl(const std::string& hostname,
 {
 	// Prepare HTTP context
 	Poco::Net::HTTPClientSession session(hostname_, port_);
-	Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, "/", "HTTP/1.1");
+
+	// Proxy Settings
+	set_proxysettings(&session);
+
+	Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, "/", Poco::Net::HTTPMessage::HTTP_1_1);
 	if(requestHeaders.size() != 0){
 		for(size_t i=0;i<requestHeaders.size();++i){
 			request.set(std::string(requestHeaders[i].key),  std::string(requestHeaders[i].value));
@@ -252,6 +260,92 @@ int mimiioImpl::receive_frame(std::vector<char> &buffer, OPF_TYPE& opframe, shor
 		}
 	}
 	return n;
+}
+
+/*
+	Reads proxy settings from 'http_proxy' environment variable.
+
+        When using bash:
+		1) With user authentication
+			export https_proxy=http://<username>:<password>@<proxy server>:<port>/
+		2) Without user authentication
+			export https_proxy=http://<proxy server>:<port>/
+*/
+void mimiioImpl::set_proxysettings(Poco::Net::HTTPClientSession* pSession)
+{
+    const char* tmpEnvProxy = std::getenv("https_proxy");
+    if (tmpEnvProxy != NULL) {
+	    // Proxy Settings
+	    std::string envProxy = std::getenv("https_proxy");
+		if(envProxy.size() != 0) {
+			logger_.information("mimiio: set proxysettings...");
+			envProxy = Poco::replace(envProxy, "http://", "");
+			envProxy = Poco::replace(envProxy, "https://", "");
+			envProxy = Poco::replace(envProxy, "/",  "");
+
+			// Split of user information and host information.
+			std::vector<std::string> vSplitAt;
+			std::stringstream ssEnvProxy(envProxy);
+			std::string buffer;
+			while(std::getline(ssEnvProxy, buffer, '@')) {
+				vSplitAt.push_back(buffer);
+			}
+
+			// Split into individual configuration information.
+			std::vector<std::string> vSplitParam;
+			while(vSplitAt.size() != 0) {
+			    std::string proxyParam = vSplitAt[vSplitAt.size()-1];
+				vSplitAt.pop_back();
+
+				std::stringstream ssProxyParam(proxyParam);
+				while( std::getline(ssProxyParam, buffer, ':') ) {
+					vSplitParam.push_back(buffer);
+				}
+			}
+
+			// Proxy information generation
+			Poco::Net::HTTPSClientSession::ProxyConfig proxy;
+			for(int idx=0;idx<vSplitParam.size();++idx){
+				switch(idx) {
+					case 0:
+						proxy.host=vSplitParam[idx];
+						break;
+					case 1:
+						if (std::all_of(vSplitParam[idx].cbegin(), vSplitParam[idx].cend(), isdigit)) {
+							proxy.port=stoi(vSplitParam[idx]);
+						} else {
+							// default: 80
+						}
+						break;
+					case 2:
+						proxy.username=vSplitParam[idx];
+						break;
+					case 3:
+						proxy.password=vSplitParam[idx];
+						break;
+					default:
+						break;
+				}
+			}
+
+		    tmpEnvProxy = std::getenv("no_proxy");
+		    if (tmpEnvProxy != NULL) {
+			    std::string envProxy = std::getenv("no_proxy");
+				if(envProxy.size() != 0){
+					proxy.nonProxyHosts = Poco::replace(envProxy, ",", "|");
+				}
+			}
+
+			// Setting proxy information for session
+			pSession->setProxyConfig(proxy);
+
+			logger_.information("Proxy Host: %s\n", proxy.host);
+			logger_.information("Proxy Port: %d\n", (int)proxy.port);
+			logger_.information("Proxy username: %s\n", proxy.username);
+			logger_.information("Proxy password: %s\n", proxy.password);
+			logger_.information("Proxy no_proxy: %s\n", proxy.nonProxyHosts);
+		}
+	}
 }
 
 }
