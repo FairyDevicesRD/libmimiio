@@ -37,11 +37,11 @@ int mimiioController::send(const std::vector<char>& buffer)
 		return impl_->send_frame(buffer, buffer.size());
 	}catch(const Poco::Net::WebSocketException &e){
 		errorno_ = 800 + static_cast<int>(e.code());
-		logger_.error("mimiioController: WebSocket exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+		logger_.error("mimiioController: WebSocket exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 		return 0;
 	}catch(const Poco::TimeoutException &e){
 		errorno_ = 830; //timeout;
-		logger_.error("mimiioController: WebSocket exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+		logger_.error("mimiioController: WebSocket exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 		return 0;
 	}catch(const Poco::Net::NetException &e){
 		errorno_ = 790; // network error
@@ -69,10 +69,10 @@ void mimiioController::send_break()
 		impl_->send_break();
 	}catch(const Poco::Net::WebSocketException &e){
 		errorno_ = 800 + static_cast<int>(e.code());
-		logger_.error("mimiioController: WebSocket exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+		logger_.error("mimiioController: WebSocket exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 	}catch(const Poco::TimeoutException &e){
 		errorno_ = 830; //timeout;
-		logger_.error("mimiioController: WebSocket exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+		logger_.error("mimiioController: WebSocket exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 	}catch(const Poco::Net::NetException &e){
 		errorno_ = 790; // network error
 		logger_.error("mimiioController: Network exception: %s (%d)", e.displayText(), errorno_);
@@ -102,11 +102,11 @@ int mimiioController::receive(std::vector<char>& buffer, bool blocking)
 		}else if(opc == mimiioImpl::CLOSE_FRAME){
 			if(n == 0){
 				errorno_ = 904;
-				logger_.warning("mimiioController: %s (%d)", mimiio::strerror(errorno_), errorno_);
+				logger_.warning("mimiioController: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 			}else{
 				//pass through server side's error code.
 				errorno_ = static_cast<int>(closeStatus);
-				logger_.error("mimiioController: %s (%d)", mimiio::strerror(errorno_), errorno_);
+				logger_.error("mimiioController: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 			}
 			return 0; // libmimiio user don't have to care about close status, because it's copied to errorno_ in this class.
 		}else{ // for text frame or binary frame
@@ -114,11 +114,11 @@ int mimiioController::receive(std::vector<char>& buffer, bool blocking)
 		}
 	}catch(const Poco::Net::WebSocketException &e){
 		errorno_ = 800 + static_cast<int>(e.code());
-		logger_.error("mimiioController: WebSocket exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+		logger_.error("mimiioController: WebSocket exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 		return 0;
 	}catch(const Poco::TimeoutException &e){
 		errorno_ = 830; // timeout
-		logger_.error("mimiioController: WebSocket exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+		logger_.error("mimiioController: WebSocket exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 		return 0;
 	}catch(const Poco::Net::NetException &e){
 		errorno_ = 790; // network error
@@ -126,11 +126,11 @@ int mimiioController::receive(std::vector<char>& buffer, bool blocking)
 		return 0;
 	}catch(const UnknownFrameReceived &e){
 		errorno_ = 890; // unknown flag received
-		logger_.error("mimiioController: WebSocket exception: %s (%d), terminate rxWorker.", mimiio::strerror(errorno_), errorno_);
+		logger_.error("mimiioController: WebSocket exception: %s (%d), terminate rxWorker.", std::string(mimiio::strerror(errorno_)), errorno_);
 		return 0;
 	}catch(const UnexpectedNetworkDisconnection &e){
 		errorno_ = 791; // unexpected network disconnection
-		logger_.error("mimiioController: Network exception: %s (%d), terminate rxWorker.", mimiio::strerror(errorno_), errorno_);
+		logger_.error("mimiioController: Network exception: %s (%d), terminate rxWorker.", std::string(mimiio::strerror(errorno_)), errorno_);
 		return 0;
 	}catch(const std::exception &e){
 		errorno_ = 799; // undefined network error

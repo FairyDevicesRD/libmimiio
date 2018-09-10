@@ -18,7 +18,7 @@ namespace mimiio{
  * @param [in] errorno error number
  * @return error string
  */
-inline std::string strerror(int errorno)
+inline const char* strerror(int errorno)
 {
 	if(errorno < 0){
 		return "user defined error.";

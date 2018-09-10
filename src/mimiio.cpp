@@ -133,7 +133,7 @@ MIMI_IO* mimi_open(
 		return nullptr;
 	}catch(const Poco::Net::WebSocketException &e){
 		*errorno = 800 + static_cast<int>(e.code()); // 800s' error
-		(logger).fatal("lmio: mimi_open failed: WebSocket exception: %s (%d)", mimiio::strerror(*errorno), *errorno);
+		(logger).fatal("lmio: mimi_open failed: WebSocket exception: %s (%d)", std::string(mimiio::strerror(*errorno)), *errorno);
 		//(logger).getChannel()->close();
 		return nullptr;
 	}catch(const Poco::Net::HostNotFoundException &e){
@@ -220,7 +220,7 @@ int mimi_error(MIMI_IO *mio)
 
 const char* mimi_strerror(int errorno)
 {
-	return mimiio::strerror(errorno).c_str();
+	return mimiio::strerror(errorno);
 }
 
 const char* mimi_version()

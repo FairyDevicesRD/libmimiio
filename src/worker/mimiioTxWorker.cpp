@@ -80,7 +80,7 @@ void mimiioTxWorker::run()
 				//Buffer overrun has occurred!
 				//This might have caused destructive memory error, when you're enough happy to be nothing happened. libmimiio is shutdown immediately.
 				errorno_ = 903;
-				logger_.fatal("lmio: txWorker: %s (%d), terminate txWorker.", mimiio::strerror(errorno_), errorno_);
+				logger_.fatal("lmio: txWorker: %s (%d), terminate txWorker.", std::string(mimiio::strerror(errorno_)), errorno_);
 				break; // break tx loop
 			}
 			if(len == 0){
@@ -134,11 +134,11 @@ void mimiioTxWorker::run()
 			}
 		}catch(const Poco::Net::WebSocketException &e){
 			errorno_ = 800 + static_cast<int>(e.code());
-			logger_.fatal("lmio: txWorker: WebSocket exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+			logger_.fatal("lmio: txWorker: WebSocket exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 			break;
 		}catch(const Poco::TimeoutException &e){
 			errorno_ = 830; //timeout;
-			logger_.fatal("lmio: txWorker: WebSocket exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+			logger_.fatal("lmio: txWorker: WebSocket exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 			break;
 		}catch(const Poco::Net::NetException &e){
 			errorno_ = 790; // network error

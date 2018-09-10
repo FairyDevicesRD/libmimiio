@@ -66,7 +66,7 @@ void mimiioRxWorker::run()
 			}else if(opc == mimiioImpl::CLOSE_FRAME){
 				if(n == 0){
 					errorno_ = 904;
-					logger_.warning("lmio: rxWorker(n=0): %s (%d)", mimiio::strerror(errorno_), errorno_);
+					logger_.warning("lmio: rxWorker(n=0): %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 					break; //break rx loop
 				}else{
 					if(closeStatus == 1000){
@@ -75,7 +75,7 @@ void mimiioRxWorker::run()
 					}else{
 						//pass through server side's error code.
 						errorno_ = static_cast<int>(closeStatus);
-						logger_.warning("lmio: rxWorker(n!=0): %s (%d), terminate rxWorker.", mimiio::strerror(errorno_), errorno_);
+						logger_.warning("lmio: rxWorker(n!=0): %s (%d), terminate rxWorker.", std::string(mimiio::strerror(errorno_)), errorno_);
 						break; //break rx loop
 					}
 				}
@@ -86,7 +86,7 @@ void mimiioRxWorker::run()
 			if(opc == mimiioImpl::TEXT_FRAME){
 				if(n == 0){
 					errorno_ = 906;
-					logger_.warning("lmio: rxWorker: %s (%d)", mimiio::strerror(errorno_), errorno_);
+					logger_.warning("lmio: rxWorker: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 					break; //break rx loop
 				}else{
 					std::string s(buffer.begin(), buffer.end()); //for null termination
@@ -95,7 +95,7 @@ void mimiioRxWorker::run()
 			}else{
 				if(n == 0){
 					errorno_ = 907;
-					logger_.warning("lmio: rxWorker: %s (%d)", mimiio::strerror(errorno_), errorno_);
+					logger_.warning("lmio: rxWorker: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 					break; //break rx loop
 				}else{
 					func_(&buffer[0], buffer.size(), &rxfunc_error, userdata_);
@@ -109,11 +109,11 @@ void mimiioRxWorker::run()
 			Poco::Thread::sleep(1); // avoid busy loop, even if Poco's receive_frame() is set non-blocking mode.
 		}catch(const Poco::Net::WebSocketException &e){
 			errorno_ = 800 + static_cast<int>(e.code());
-			logger_.fatal("lmio: rxWorker: WebSocket exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+			logger_.fatal("lmio: rxWorker: WebSocket exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 			break;
 		}catch(const Poco::TimeoutException &e){
 			errorno_ = 830; // timeout
-			logger_.fatal("lmio: rxWorker: Timeout exception: %s (%d)", mimiio::strerror(errorno_), errorno_);
+			logger_.fatal("lmio: rxWorker: Timeout exception: %s (%d)", std::string(mimiio::strerror(errorno_)), errorno_);
 			break;
 		}catch(const Poco::Net::NetException &e){
 			errorno_ = 790; // network error
@@ -121,11 +121,11 @@ void mimiioRxWorker::run()
 			break;
 		}catch(const UnknownFrameReceived &e){
 			errorno_ = 890; // unknown flag received
-			logger_.fatal("lmio: rxWorker: WebSocket exception: %s (%d), terminate rxWorker.", mimiio::strerror(errorno_), errorno_);
+			logger_.fatal("lmio: rxWorker: WebSocket exception: %s (%d), terminate rxWorker.", std::string(mimiio::strerror(errorno_)), errorno_);
 			break;
 		}catch(const UnexpectedNetworkDisconnection &e){
 			errorno_ = 791; // unexpected network disconnection
-			logger_.fatal("lmio: rxWorker: Network exception: %s (%d), terminate rxWorker.", mimiio::strerror(errorno_), errorno_);
+			logger_.fatal("lmio: rxWorker: Network exception: %s (%d), terminate rxWorker.", std::string(mimiio::strerror(errorno_)), errorno_);
 			break;
 		}catch(const std::exception &e){
 			errorno_ = 799; // undefined network error
