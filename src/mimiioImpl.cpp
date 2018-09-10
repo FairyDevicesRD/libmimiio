@@ -263,7 +263,7 @@ int mimiioImpl::receive_frame(std::vector<char> &buffer, OPF_TYPE& opframe, shor
 }
 
 /*
-	Reads proxy settings from 'http_proxy' environment variable.
+	Reads proxy settings from 'https_proxy' environment variable.
 
         When using bash:
 		1) With user authentication

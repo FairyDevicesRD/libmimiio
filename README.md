@@ -88,6 +88,16 @@ LD_LIBRARY_PATH=/usr/local/lib /usr/local/bin/mimiio_file
 
 doxygen を利用することで、本ライブラリの実装に対して自動生成ドキュメントを生成することができます。
 
+## 環境変数
+
+このライブラリは、環境変数 https_proxy に従います。
+bash をお使いの場合、以下のようにして環境変数を設定できます。
+``````````.sh
+$ export https_proxy=http://<username>:<password>@<proxy server>:<port>/ # 認証を使う場合
+$ export https_proxy=http://<proxy server>:<port>/ # 認証を使わない場合
+
+``````````
+
 ## チュートリアル
 
 ### 1. コールバック関数を定義する
