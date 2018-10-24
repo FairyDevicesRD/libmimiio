@@ -118,9 +118,6 @@ mimiioImpl::mimiioImpl(const std::string& hostname,
 	// Prepare HTTP context
 	Poco::Net::HTTPClientSession session(hostname_, port_);
 
-	// Proxy Settings
-	set_proxysettings(&session);
-
 	Poco::Net::HTTPRequest request(Poco::Net::HTTPRequest::HTTP_GET, "/", Poco::Net::HTTPMessage::HTTP_1_1);
 	if(requestHeaders.size() != 0){
 		for(size_t i=0;i<requestHeaders.size();++i){
@@ -278,7 +275,6 @@ void mimiioImpl::set_proxysettings(Poco::Net::HTTPClientSession* pSession)
 	    // Proxy Settings
 	    std::string envProxy = std::getenv("https_proxy");
 		if(envProxy.size() != 0) {
-			logger_.information("mimiio: set proxysettings...");
 			envProxy = Poco::replace(envProxy, "http://", "");
 			envProxy = Poco::replace(envProxy, "https://", "");
 			envProxy = Poco::replace(envProxy, "/",  "");
@@ -339,11 +335,8 @@ void mimiioImpl::set_proxysettings(Poco::Net::HTTPClientSession* pSession)
 			// Setting proxy information for session
 			pSession->setProxyConfig(proxy);
 
-			logger_.information("Proxy Host: %s\n", proxy.host);
-			logger_.information("Proxy Port: %d\n", (int)proxy.port);
-			logger_.information("Proxy username: %s\n", proxy.username);
-			logger_.information("Proxy password: %s\n", proxy.password);
-			logger_.information("Proxy no_proxy: %s\n", proxy.nonProxyHosts);
+			logger_.information("mimiio: proxy host: %s, proxy port: %d, proxy username: %s, no_proxy: %s\n",
+					    proxy.host, (int)proxy.port, proxy.username, proxy.nonProxyHosts);
 		}
 	}
 }
