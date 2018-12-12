@@ -12,6 +12,8 @@ WebSocket (RFC6455) 通信を利用した mimi(R) WebSocket API Service を簡�
 
 ### 依存ライブラリ
 
+本ライブラリは Apache License 2.0 で公開されていますが、いくつかのオープンソースソフトウェアを利用しています。各ソフトウェアにはそれぞれのライセンスが適用されます。ご確認の上、ご利用ください。
+
 #### 必須
 
 - Poco C++ libraries Complete Edition 1.8.0 以上。 Tumbler 向けのプレビルドライブラリは[こちら](https://github.com/FairyDevicesRD/tumbler.poco)、それ以外の一部の環境向けのプレビルドライブラリは[こちら](https://github.com/FairyDevicesRD/poco)に用意されています。
