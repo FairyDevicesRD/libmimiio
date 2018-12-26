@@ -16,9 +16,11 @@ WebSocket (RFC6455) 通信を利用した mimi(R) WebSocket API Service を簡�
 
 特に、モバイルやデスクトップのアプリなど、関連ライブラリを静的リンクや同梱して配布する際には、本ライブラリおよび以下のライブラリのライセンス表記を行う必要がある旨ご注意ください。
 
-- OpenSSL （利用する場合）
-- FLAC （利用する場合）
-- cmdline ( `examples` 配下のプログラムを配布する場合）
+- [OpenSSL](https://www.openssl.org/) （利用する場合）
+- [FLAC](https://xiph.org/flac/) （利用する場合）
+- [cmdline](https://github.com/tanakh/cmdline) ( `examples` 配下のプログラムを配布する場合）
+- [PortAudio](http://www.portaudio.com) ( `examples/mimiio_pa` 配下のプログラムを配布する場合）
+- [libmimixfe](https://github.com/FairyDevicesRD/libmimixfe) ( `examples/mimiio_tumbler` 配下のプログラムを配布する場合）
 
 
 ## 構築
