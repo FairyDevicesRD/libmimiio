@@ -37,6 +37,7 @@
 #include <stdexcept>
 #include <sstream>
 #include <atomic>
+#include <syslog.h>
 
 volatile sig_atomic_t interrupt_flag_ = 0;
 void sig_handler_(int signum){ interrupt_flag_ = 1; }
@@ -348,7 +349,7 @@ int main(int argc, char** argv)
 		// Initialize mimixfe
 	    Session::ConnectionParam param(p.get<std::string>("host"), p.get<int>("port"), access_token,
 	    		p.get<int>("rate"), p.get<int>("channel"), af, p.exist("verbose"));
-	    
+
 	    std::vector<MIMIIO_HTTP_REQUEST_HEADER> hs;
 	    MIMIIO_HTTP_REQUEST_HEADER h;
 	    strcpy(h.key,"x-mimi-input-language");
@@ -359,7 +360,7 @@ int main(int argc, char** argv)
 	    strcpy(h1.value,p.get<std::string>("services").c_str());
 	    hs.push_back(h1);
 	    param.header_ = hs;
-	    
+
 	    Session session(param);
 	    int xfe_errorno = 0;
 	    mimixfe::XFESourceConfig s;
@@ -369,7 +370,8 @@ int main(int argc, char** argv)
 	    v.tailPaddingTime_ = 400;
 	    mimixfe::XFEBeamformerConfig b;
 	    mimixfe::XFEStaticLocalizerConfig c({mimixfe::Direction(270, 90)});
-	    mimixfe::XFERecorder rec(s,e,v,b,c,recorderCallback,reinterpret_cast<void*>(&session));
+		mimixfe::XFEOutputConfig o;
+	    mimixfe::XFERecorder rec(s,e,v,b,c,o,recorderCallback,reinterpret_cast<void*>(&session));
 	    rec.setLogLevel(LOG_UPTO(LOG_DEBUG));
 	    if(signal(SIGINT, sig_handler_) == SIG_ERR){
 	    	return 1;
@@ -412,6 +414,3 @@ int main(int argc, char** argv)
 		return 2;
 	 }
 }
-
-
-
