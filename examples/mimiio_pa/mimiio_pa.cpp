@@ -210,6 +210,9 @@ int main(int argc, char** argv)
         p.add<int>("rate", '\0', "Sampling rate", false, 16000);
         p.add<int>("channel", '\0', "Number of channels", false, 1);
         p.add<std::string>("format", '\0', "Audio format", false, "MIMIIO_RAW_PCM");
+        p.add<std::string>("input_language", 'l', "input language", false, "ja");
+        p.add<std::string>("output_language", 'L', "output language", false, "ja");
+        p.add<std::string>("process", 'x', "x-mimi-process", false, "asr");
         p.add("verbose", '\0', "Verbose mode");
         p.add("help", '\0', "Show help");
         if (!p.parse(argc, argv)) {
@@ -285,11 +288,25 @@ int main(int argc, char** argv)
 		std::cerr << "Recording starts." << std::endl;
 	}
 
+    std::string mimi_process;
+    mimi_process = p.get<std::string>("process");
+
+    std::string input_lang;
+    input_lang = p.get<std::string>("input_language");
+
+    std::string output_lang;
+    output_lang = p.get<std::string>("output_language");
+
     // Prepare mimi runtime configuration
-    size_t header_size = 1;
+    size_t header_size = 3;
     MIMIIO_HTTP_REQUEST_HEADER h[header_size];
     strcpy(h[0].key, "x-mimi-process");
-    strcpy(h[0].value, "asr");
+    strcpy(h[0].value, mimi_process.c_str());
+    strcpy(h[1].key, "x-mimi-input-language");
+    strcpy(h[1].value, input_lang.c_str());
+    strcpy(h[2].key, "x-mimi-output-language");
+    strcpy(h[2].value, output_lang.c_str());
+
 
 	// Open mimi stream
 	int errorno = 0;
