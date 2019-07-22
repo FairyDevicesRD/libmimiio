@@ -218,6 +218,9 @@ MIMI_IO* mimi_open(
 |13|int loglevel|libmimiio がシステムログに出力するログレベルを指定する|
 |14|int* errorno|`mimi_open()` が失敗したときのエラーコードが返される|
 
+`loglevel` は、初回 `mimi_open()` 時に指定した値がプログラム終了時まで適用されます。
+次回以降の `mimi_open()` では `loglevel` の変更ができないことに留意してください。
+
 ###### MIMI_AUDIO_FORMAT
 
 `````.cpp
@@ -328,18 +331,3 @@ typedef enum{
 const char* mimi_strerror(int);
 // ex. network error
 ``````````
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
