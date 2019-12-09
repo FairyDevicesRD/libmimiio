@@ -8,9 +8,22 @@ libmimiio - mimi(R) WebSocket API Service client library
 
 WebSocket (RFC6455) 通信を利用した mimi(R) WebSocket API Service を簡単に利用するためのライブラリです。 mimi(R) との通信仕様は公開されていますので、必ずしも本ライブラリを利用する必要はありません。本ライブラリ自体は C++11 で実装されていますが、ライブラリの外部 API は C の API を提供しています。
 
-## 構築
+#### ライセンスについてのご注意
 
-### 依存ライブラリ
+本ライブラリおよびサンプルプログラムは、オープンソースソフトウェアとして公開しており、Apache License 2.0 のもとで、商用製品への組み込みを含め、自由にご利用いただけます。
+
+ご利用の際は、本ライブラリのライセンスに加え、関連ライブラリのライセンスにも従う必要がございますので、ご留意いただけますようお願いいたします。
+
+特に、モバイルやデスクトップのアプリなど、関連ライブラリを静的リンクや同梱して配布する際には、本ライブラリおよび以下のライブラリのライセンス表記を行う必要がある旨ご注意ください。
+
+- [OpenSSL](https://www.openssl.org/) （利用する場合）
+- [FLAC](https://xiph.org/flac/) （利用する場合）
+- [cmdline](https://github.com/tanakh/cmdline) ( `examples` 配下のプログラムを配布する場合）
+- [PortAudio](http://www.portaudio.com) ( `examples/mimiio_pa` 配下のプログラムを配布する場合）
+- [libmimixfe](https://github.com/FairyDevicesRD/libmimixfe) ( `examples/mimiio_tumbler` 配下のプログラムを配布する場合）
+
+
+## 構築
 
 #### 必須
 
@@ -215,6 +228,9 @@ MIMI_IO* mimi_open(
 |13|int loglevel|libmimiio がシステムログに出力するログレベルを指定する|
 |14|int* errorno|`mimi_open()` が失敗したときのエラーコードが返される|
 
+`loglevel` は、初回 `mimi_open()` 時に指定した値がプログラム終了時まで適用されます。
+次回以降の `mimi_open()` では `loglevel` の変更ができないことに留意してください。
+
 ###### MIMI_AUDIO_FORMAT
 
 `````.cpp
@@ -325,18 +341,3 @@ typedef enum{
 const char* mimi_strerror(int);
 // ex. network error
 ``````````
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

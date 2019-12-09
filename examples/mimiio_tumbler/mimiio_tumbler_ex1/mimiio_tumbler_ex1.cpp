@@ -35,6 +35,7 @@
 #include <vector>
 #include <unistd.h>
 #include <signal.h>
+#include <syslog.h>
 
 volatile sig_atomic_t interrupt_flag_ = 0;
 void sig_handler_(int signum){ interrupt_flag_ = 1; }
@@ -224,7 +225,8 @@ int main(int argc, char** argv)
 		 mimixfe::XFEVADConfig v;
 		 mimixfe::XFEBeamformerConfig b;
 		 mimixfe::XFEStaticLocalizerConfig c({mimixfe::Direction(270, 90)});
-		 mimixfe::XFERecorder rec(s,e,v,b,c,recorderCallback,reinterpret_cast<void*>(&queue));
+		 mimixfe::XFEOutputConfig o;
+		 mimixfe::XFERecorder rec(s,e,v,b,c,o,recorderCallback,reinterpret_cast<void*>(&queue));
 		 rec.setLogLevel(LOG_UPTO(LOG_DEBUG));
 		 if(signal(SIGINT, sig_handler_) == SIG_ERR){
 			 return 1;
@@ -315,6 +317,3 @@ int main(int argc, char** argv)
 		return 2;
 	 }
 }
-
-
-

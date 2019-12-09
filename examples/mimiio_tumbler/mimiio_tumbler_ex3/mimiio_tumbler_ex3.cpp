@@ -51,6 +51,7 @@
 #include <sstream>
 #include <atomic>
 #include <fstream>
+#include <syslog.h>
 
 volatile sig_atomic_t interrupt_flag_ = 0;
 void sig_handler_(int signum){ interrupt_flag_ = 1; }
@@ -291,7 +292,7 @@ int main(int argc, char** argv)
             return 0;
         }
     }
-    
+
     const char *access_token = nullptr;
     if (p.exist("token")) {
         access_token = p.get<std::string>("token").c_str();
@@ -318,7 +319,8 @@ int main(int argc, char** argv)
 	    mimixfe::XFEVADConfig v;
 	    mimixfe::XFEBeamformerConfig b;
 	    mimixfe::XFEStaticLocalizerConfig c({mimixfe::Direction(270, 90)});
-	    mimixfe::XFERecorder rec(s,e,v,b,c,recorderCallback,reinterpret_cast<void*>(&eventStack));
+		mimixfe::XFEOutputConfig o;
+	    mimixfe::XFERecorder rec(s,e,v,b,c,o,recorderCallback,reinterpret_cast<void*>(&eventStack));
 	    rec.setLogLevel(LOG_UPTO(LOG_DEBUG));
 	    if(signal(SIGINT, sig_handler_) == SIG_ERR){ // For backward compatibility
 	    	return 1;
@@ -361,6 +363,3 @@ int main(int argc, char** argv)
 		return 2;
 	 }
 }
-
-
-

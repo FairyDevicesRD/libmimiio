@@ -27,6 +27,29 @@
 #include <Poco/FormattingChannel.h>
 #include <Poco/AsyncChannel.h>
 #include <memory>
+#include <mutex>
+
+static void set_logger_properties(Poco::Logger& logger, int level) {
+	// Initialize and prepare log context
+#ifdef _WIN32
+	Poco::AutoPtr<Poco::EventLogChannel> pChannel(new Poco::EventLogChannel());
+#elif __APPLE__
+	// Despite what you pass to setlogmask(), in its default configuration, OS X will only write messages to the system log
+	// that have a priority of LOG_NOTICE or higher,
+	Poco::AutoPtr<Poco::ConsoleChannel> pChannel(new Poco::ConsoleChannel());
+#else
+	Poco::AutoPtr<Poco::SyslogChannel> pChannel(new Poco::SyslogChannel());
+#endif
+	Poco::AutoPtr<Poco::PatternFormatter> fmt(new Poco::PatternFormatter);
+	fmt->setProperty("pattern","%Y-%m-%d %H:%M:%S (%N) [%s:%P:%I:%p] %t"); // set log base format
+	fmt->setProperty(Poco::PatternFormatter::PROP_TIMES, "local"); // set log time local
+	Poco::AutoPtr<Poco::FormattingChannel> pfmtChannel(new Poco::FormattingChannel(fmt, pChannel));
+	logger.setChannel(pfmtChannel.get());
+	// AsyncChannel may not be stable for multi-thread environment.
+	//Poco::AutoPtr<Poco::AsyncChannel> pasyncfmtChannel(new Poco::AsyncChannel(pfmtChannel));
+	//logger.setChannel(pasyncfmtChannel);
+	logger.setLevel(level);
+}
 
 MIMI_IO* mimi_open(
 		const char* mimi_host,
@@ -44,27 +67,10 @@ MIMI_IO* mimi_open(
 		int loglevel,
 		int* errorno)
 {
+	static std::once_flag flag;
 	Poco::Logger& logger = Poco::Logger::get(PACKAGE_NAME);
 	try{
-		// Initialize and prepare log context
-#ifdef _WIN32
-		Poco::AutoPtr<Poco::EventLogChannel> pChannel(new Poco::EventLogChannel());
-#elif __APPLE__
-		// Despite what you pass to setlogmask(), in its default configuration, OS X will only write messages to the system log
-		// that have a priority of LOG_NOTICE or higher,
-		Poco::AutoPtr<Poco::ConsoleChannel> pChannel(new Poco::ConsoleChannel());
-#else
-		Poco::AutoPtr<Poco::SyslogChannel> pChannel(new Poco::SyslogChannel());
-#endif
-		Poco::AutoPtr<Poco::PatternFormatter> fmt(new Poco::PatternFormatter);
-		fmt->setProperty("pattern","%Y-%m-%d %H:%M:%S (%N) [%s:%P:%I:%p] %t"); // set log base format
-		fmt->setProperty(Poco::PatternFormatter::PROP_TIMES, "local"); // set log time local
-		Poco::AutoPtr<Poco::FormattingChannel> pfmtChannel(new Poco::FormattingChannel(fmt, pChannel));
-		logger.setChannel(pfmtChannel.get());
-		// AsyncChannel may not be stable for multi-thread environment.
-		//Poco::AutoPtr<Poco::AsyncChannel> pasyncfmtChannel(new Poco::AsyncChannel(pfmtChannel));
-		//logger.setChannel(pasyncfmtChannel);
-		logger.setLevel(loglevel);
+		std::call_once(flag, set_logger_properties, logger, loglevel);
 
 		// Create encoder
 		mimiio::mimiioEncoderFactory encoderFactory(logger);
