@@ -26,54 +26,50 @@
 
 #include "SpeechEvent.h"
 
-SpeechEvent::SpeechEvent() : stream_(nullptr), prev_(nullptr), eventLoopContinue_(true), eventId_(0)
-{
+SpeechEvent::SpeechEvent() : stream_(nullptr), prev_(nullptr), eventLoopContinue_(true), eventId_(0) {
 }
 
-SpeechEvent::~SpeechEvent()
-{
-	finish();
-	eventLoop_.get();
+SpeechEvent::~SpeechEvent() {
+    finish();
+    eventLoop_.get();
 }
 
-void SpeechEvent::speechStartHandler(int sourceId, const std::vector<mimixfe::StreamInfo>& streamInfo){}
+void SpeechEvent::speechStartHandler(int sourceId, const std::vector<mimixfe::StreamInfo> &streamInfo) {}
 
-void SpeechEvent::inSpeechHandler(int sourceId, const std::vector<mimixfe::StreamInfo>& streamInfo){}
+void SpeechEvent::inSpeechHandler(int sourceId, const std::vector<mimixfe::StreamInfo> &streamInfo) {}
 
-void SpeechEvent::speechEndHandler(int sourceId, const std::vector<mimixfe::StreamInfo>& streamInfo){}
+void SpeechEvent::speechEndHandler(int sourceId, const std::vector<mimixfe::StreamInfo> &streamInfo) {}
 
-void SpeechEvent::responseHandler(int sourceId, const std::string& response){}
+void SpeechEvent::responseHandler(int sourceId, const std::string &response) {}
 
-void SpeechEvent::errorHandler(int errorno){}
+void SpeechEvent::errorHandler(int errorno) {}
 
-void SpeechEvent::start()
-{
-	eventLoop_ = std::async(std::launch::async, [&]{
-		while(eventLoopContinue_.load()){
-			Stream::SpeechEventData data;
-			stream_->notified(data); // block until notification received from stream.
-			if(data.finish_){
-				break;
-			}
-			if(data.response_.size() != 0){
-				responseHandler(data.sourceId_, data.response_);
-			}else{
-				if(data.status_ == mimixfe::SpeechState::SpeechStart){
-					speechStartHandler(data.sourceId_, data.streamInfo_);
-				}else if(data.status_ == mimixfe::SpeechState::InSpeech && data.streamInfo_.size() != 0){
-					inSpeechHandler(data.sourceId_, data.streamInfo_);
-				}else if(data.status_ == mimixfe::SpeechState::SpeechEnd){
-					speechEndHandler(data.sourceId_, data.streamInfo_);
-				}
-			}
-		}
-	});
+void SpeechEvent::start() {
+    eventLoop_ = std::async(std::launch::async, [&] {
+        while (eventLoopContinue_.load()) {
+            Stream::SpeechEventData data;
+            stream_->notified(data); // block until notification received from stream.
+            if (data.finish_) {
+                break;
+            }
+            if (data.response_.size() != 0) {
+                responseHandler(data.sourceId_, data.response_);
+            } else {
+                if (data.status_ == mimixfe::SpeechState::SpeechStart) {
+                    speechStartHandler(data.sourceId_, data.streamInfo_);
+                } else if (data.status_ == mimixfe::SpeechState::InSpeech && data.streamInfo_.size() != 0) {
+                    inSpeechHandler(data.sourceId_, data.streamInfo_);
+                } else if (data.status_ == mimixfe::SpeechState::SpeechEnd) {
+                    speechEndHandler(data.sourceId_, data.streamInfo_);
+                }
+            }
+        }
+    });
 }
 
-void SpeechEvent::finish()
-{
-	eventLoopContinue_ = false;
-	Stream::SpeechEventData data;
-	data.finish_ = true;
-	stream_->notify(data); // イベントループ内のブロックを解除する
+void SpeechEvent::finish() {
+    eventLoopContinue_ = false;
+    Stream::SpeechEventData data;
+    data.finish_ = true;
+    stream_->notify(data); // イベントループ内のブロックを解除する
 }

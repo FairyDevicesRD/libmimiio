@@ -43,11 +43,9 @@ static void set_logger_properties(Poco::Logger& logger, int level) {
 	Poco::AutoPtr<Poco::PatternFormatter> fmt(new Poco::PatternFormatter);
 	fmt->setProperty("pattern","%Y-%m-%d %H:%M:%S (%N) [%s:%P:%I:%p] %t"); // set log base format
 	fmt->setProperty(Poco::PatternFormatter::PROP_TIMES, "local"); // set log time local
-	Poco::AutoPtr<Poco::FormattingChannel> pfmtChannel(new Poco::FormattingChannel(fmt, pChannel));
-	logger.setChannel(pfmtChannel.get());
+	logger.setChannel(new Poco::FormattingChannel(fmt, pChannel));
 	// AsyncChannel may not be stable for multi-thread environment.
-	//Poco::AutoPtr<Poco::AsyncChannel> pasyncfmtChannel(new Poco::AsyncChannel(pfmtChannel));
-	//logger.setChannel(pasyncfmtChannel);
+	//logger.setChannel(new Poco::AsyncChannel(pfmtChannel));
 	logger.setLevel(level);
 }
 

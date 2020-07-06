@@ -37,6 +37,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+
 #ifdef __APPLE__
 #include <syslog.h>
 #endif
@@ -69,8 +70,7 @@ FILE *inputfile_; //!< audio file to be sent
  * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
  * @param [in,out] userdata 任意のユーザー定義データ
  */
-void txfunc(char *buffer, size_t *len, bool *recog_break, int *txfunc_error, void *userdata)
-{
+void txfunc(char *buffer, size_t *len, bool *recog_break, int *txfunc_error, void *userdata) {
     size_t chunk_size = 2048;
     *len = fread(buffer, 1, chunk_size, inputfile_); // 音声ファイルを chunk_size ずつサーバーに送信します
     if (*len < chunk_size) { // 音声ファイルを読み終わった時点で、送信の終了を宣言します
@@ -110,40 +110,36 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int *txfunc_error, voi
  * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
  * @param [in,out] userdata 任意のユーザー定義データ
  */
-void rxfunc(const char *result, size_t len, int *rxfunc_error, void *userdata)
-{
-	std::string s(result, len);
-	std::cout << s << std::endl;
+void rxfunc(const char *result, size_t len, int *rxfunc_error, void *userdata) {
+    std::string s(result, len);
+    std::cout << s << std::endl;
 }
 
 // 送信音声形式をコマンドライン引数から指定するための実装例
-struct AFENTRY
-{
+struct AFENTRY {
     char const *name;
     MIMIIO_AUDIO_FORMAT af;
 };
 
 constexpr AFENTRY afmap[] =
-{
-    {"MIMIIO_RAW_PCM", MIMIIO_RAW_PCM},
-    {"MIMIIO_FLAC_0", MIMIIO_FLAC_0},
-    {"MIMIIO_FLAC_1", MIMIIO_FLAC_1},
-    {"MIMIIO_FLAC_2", MIMIIO_FLAC_2},
-    {"MIMIIO_FLAC_3", MIMIIO_FLAC_3},
-    {"MIMIIO_FLAC_4", MIMIIO_FLAC_4},
-    {"MIMIIO_FLAC_5", MIMIIO_FLAC_5},
-    {"MIMIIO_FLAC_6", MIMIIO_FLAC_6},
-    {"MIMIIO_FLAC_7", MIMIIO_FLAC_7},
-    {"MIMIIO_FLAC_8", MIMIIO_FLAC_8},
-    {"MIMIIO_FLAC_PASS_THROUGH", MIMIIO_FLAC_PASS_THROUGH}
-};
-
-constexpr auto afmap_size = sizeof(afmap) / sizeof(afmap[0]);
+        {
+                {"MIMIIO_RAW_PCM",           MIMIIO_RAW_PCM},
+                {"MIMIIO_FLAC_0",            MIMIIO_FLAC_0},
+                {"MIMIIO_FLAC_1",            MIMIIO_FLAC_1},
+                {"MIMIIO_FLAC_2",            MIMIIO_FLAC_2},
+                {"MIMIIO_FLAC_3",            MIMIIO_FLAC_3},
+                {"MIMIIO_FLAC_4",            MIMIIO_FLAC_4},
+                {"MIMIIO_FLAC_5",            MIMIIO_FLAC_5},
+                {"MIMIIO_FLAC_6",            MIMIIO_FLAC_6},
+                {"MIMIIO_FLAC_7",            MIMIIO_FLAC_7},
+                {"MIMIIO_FLAC_8",            MIMIIO_FLAC_8},
+                {"MIMIIO_FLAC_PASS_THROUGH", MIMIIO_FLAC_PASS_THROUGH}
+        };
 
 bool parse_afstring(const std::string &afstring, MIMIIO_AUDIO_FORMAT *af) {
-    for (auto i = 0; i < afmap_size; ++i) {
-        if (afstring == afmap[i].name) {
-            *af = afmap[i].af;
+    for (const auto &aformat : afmap) {
+        if (afstring == aformat.name) {
+            *af = aformat.af;
             return true;
         }
     };
@@ -157,7 +153,7 @@ bool parse_afstring(const std::string &afstring, MIMIIO_AUDIO_FORMAT *af) {
  */
 int main(int argc, char **argv) {
 
-	// Parsing command-line arguments
+    // Parsing command-line arguments
     cmdline::parser p;
     {
         // mandatory
@@ -170,16 +166,16 @@ int main(int argc, char **argv) {
         p.add<int>("channel", '\0', "Number of channels", false, 1);
         p.add<std::string>("format", '\0', "Audio format", false, "MIMIIO_RAW_PCM");
         p.add<std::string>("input_language", 'l', "input language", false, "ja");
-        p.add<std::string>("output_language", 'L', "output language", false, "ja");
         p.add<std::string>("process", 'x', "x-mimi-process", false, "asr");
+        p.add<std::string>("lid_options", '\0', "language identifier options", false, "lang=ja|en|zh|ko");
         p.add("verbose", '\0', "Verbose mode");
         p.add("help", '\0', "Show help");
         if (!p.parse(argc, argv)) {
             std::cout << p.error_full() << std::endl;
             std::cout << p.usage() << std::endl;
             std::cout << "Acceptable audio formats:" << std::endl;
-            for (auto i = 0; i < afmap_size; ++i) {
-                std::cout << "    " << afmap[i].name << std::endl;
+            for (const auto &aformat : afmap) {
+                std::cout << "    " << aformat.name << std::endl;
             };
             return 0;
         }
@@ -204,8 +200,8 @@ int main(int argc, char **argv) {
     std::string input_lang;
     input_lang = p.get<std::string>("input_language");
 
-    std::string output_lang;
-    output_lang = p.get<std::string>("output_language");
+    std::string lid_options;
+    lid_options = p.get<std::string>("lid_options");
 
     // Open input file
     inputfile_ = fopen(p.get<std::string>("input").c_str(), "rb");
@@ -223,14 +219,14 @@ int main(int argc, char **argv) {
     strcpy(h[0].value, mimi_process.c_str());
     strcpy(h[1].key, "x-mimi-input-language");
     strcpy(h[1].value, input_lang.c_str());
-    strcpy(h[2].key, "x-mimi-output-language");
-    strcpy(h[2].value, output_lang.c_str());
+    strcpy(h[2].key, "x-mimi-lid-options");
+    strcpy(h[2].value, lid_options.c_str());
 
     // Open mimi stream
     MIMI_IO *mio = mimi_open(
-        p.get<std::string>("host").c_str(), p.get<int>("port"), txfunc, rxfunc,
-        nullptr, nullptr, af, p.get<int>("rate"), p.get<int>("channel"), h,
-        header_size, access_token, MIMIIO_LOG_DEBUG, &errorno);
+            p.get<std::string>("host").c_str(), p.get<int>("port"), txfunc, rxfunc,
+            nullptr, nullptr, af, p.get<int>("rate"), p.get<int>("channel"), h,
+            header_size, access_token, MIMIIO_LOG_DEBUG, &errorno);
 
     if (mio == nullptr) {
         fprintf(stderr, "Could not initialize mimi(R) service. mimi_open() "
@@ -264,9 +260,9 @@ int main(int argc, char **argv) {
     errorno = mimi_error(mio);
     if (errorno != 0) {
         fprintf(
-            stderr,
-            "An error occurred while communicating mimi(R) service: %s (%d)\n",
-            mimi_strerror(errorno), errorno);
+                stderr,
+                "An error occurred while communicating mimi(R) service: %s (%d)\n",
+                mimi_strerror(errorno), errorno);
         mimi_close(mio);
         fclose(inputfile_);
         return 1;

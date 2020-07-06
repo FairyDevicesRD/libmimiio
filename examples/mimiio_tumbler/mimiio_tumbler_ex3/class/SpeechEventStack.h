@@ -34,88 +34,82 @@
 
 #include "SpeechEvent.h"
 
-template <class SE>
-class SpeechEventStack
-{
+template<class SE>
+class SpeechEventStack {
 public:
-	SpeechEventStack(const Stream::ConnectionParam& param);
+    SpeechEventStack(const Stream::ConnectionParam &param);
 
-	~SpeechEventStack();
+    ~SpeechEventStack();
 
-	/**
-	 * @brief Push audio samples and all XFE output
-	 */
-	void push(
-			const short* buf, size_t buflen, mimixfe::SpeechState state, int sourceId,
-			const mimixfe::StreamInfo* info, size_t infolen);
+    /**
+     * @brief Push audio samples and all XFE output
+     */
+    void push(
+            const short *buf, size_t buflen, mimixfe::SpeechState state, int sourceId,
+            const mimixfe::StreamInfo *info, size_t infolen);
 
-	void abort();
+    void abort();
 
 private:
-	void start();
+    void start();
 
-	BlockingDeque<SE*> deque_;
-	const Stream::ConnectionParam& param_;
-	int serialNumber_;
+    BlockingDeque<SE *> deque_;
+    const Stream::ConnectionParam &param_;
+    int serialNumber_;
 };
 
 template<class SE>
-SpeechEventStack<SE>::SpeechEventStack(const Stream::ConnectionParam& param) : param_(param)
-{
-	serialNumber_ = 0;
-	SE* ua = new SE();
-	ua->stream_.reset(new Stream(param_));
-	ua->eventId_ = ++serialNumber_;
-	ua->start();
-	deque_.push_front(ua);
-	start();
-	if(param_.verbose_){
-		std::cerr << "SpeechEventStack is started." << std::endl;
-	}
+SpeechEventStack<SE>::SpeechEventStack(const Stream::ConnectionParam &param) : param_(param) {
+    serialNumber_ = 0;
+    SE *ua = new SE();
+    ua->stream_.reset(new Stream(param_));
+    ua->eventId_ = ++serialNumber_;
+    ua->start();
+    deque_.push_front(ua);
+    start();
+    if (param_.verbose_) {
+        std::cerr << "SpeechEventStack is started." << std::endl;
+    }
 }
 
 template<class SE>
-SpeechEventStack<SE>::~SpeechEventStack()
-{
-	//TODO
+SpeechEventStack<SE>::~SpeechEventStack() {
+    //TODO
 }
 
 
 template<class SE>
 void SpeechEventStack<SE>::push(
-		const short* buf, size_t buflen, mimixfe::SpeechState state, int sourceId,
-		const mimixfe::StreamInfo* info, size_t infolen)
-{
-	deque_.front()->stream_->push(buf, buflen, sourceId, state, info, infolen);
-	if(state == mimixfe::SpeechState::SpeechStart){
-		deque_.front()->stream_->start();
-	}else if(state == mimixfe::SpeechState::SpeechEnd){
-		deque_.front()->stream_->recogBreak();
-		SE* ua = new SE();
-		ua->stream_.reset(new Stream(param_));
-		ua->prev_ = deque_.front();
-		ua->eventId_ = ++serialNumber_;
-		ua->start();
-		deque_.push_front(ua);
-		if(param_.verbose_){
-			std::cerr << "New stream is set, current stack size = " << deque_.size() << std::endl;
-		}
-	}
+        const short *buf, size_t buflen, mimixfe::SpeechState state, int sourceId,
+        const mimixfe::StreamInfo *info, size_t infolen) {
+    deque_.front()->stream_->push(buf, buflen, sourceId, state, info, infolen);
+    if (state == mimixfe::SpeechState::SpeechStart) {
+        deque_.front()->stream_->start();
+    } else if (state == mimixfe::SpeechState::SpeechEnd) {
+        deque_.front()->stream_->recogBreak();
+        SE *ua = new SE();
+        ua->stream_.reset(new Stream(param_));
+        ua->prev_ = deque_.front();
+        ua->eventId_ = ++serialNumber_;
+        ua->start();
+        deque_.push_front(ua);
+        if (param_.verbose_) {
+            std::cerr << "New stream is set, current stack size = " << deque_.size() << std::endl;
+        }
+    }
 }
 
 
 template<class SE>
-void SpeechEventStack<SE>::abort()
-{
-	//TODO
-	//イベントスタックに含まれるイベント全体を終了させる
+void SpeechEventStack<SE>::abort() {
+    //TODO
+    //イベントスタックに含まれるイベント全体を終了させる
 }
 
 template<class SE>
-void SpeechEventStack<SE>::start()
-{
-	//TODO
-	//終了したイベントを検知し、イベントスタックの長さを一定に保つ
+void SpeechEventStack<SE>::start() {
+    //TODO
+    //終了したイベントを検知し、イベントスタックの長さを一定に保つ
 }
 
 #endif /* EXAMPLES_MIMIIO_TUMBLER_MIMIIO_TUMBLER_EX3_APPLICATIONSTACK_H_ */

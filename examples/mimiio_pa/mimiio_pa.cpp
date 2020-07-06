@@ -46,7 +46,8 @@
 #include <signal.h>
 
 volatile sig_atomic_t interrupt_flag_ = 0;
-void sig_handler_(int signum){ interrupt_flag_ = 1; }
+
+void sig_handler_(int signum) { interrupt_flag_ = 1; }
 
 /**
  * \~english
@@ -55,28 +56,27 @@ void sig_handler_(int signum){ interrupt_flag_ = 1; }
  * @brief portaudio の録音コールバック関数、引数の意味など詳細は portaudio の公式ドキュメントを参照してください
  */
 static int recordCallback(
-		const void *inputBuffer,
-		void *outputBuffer,
-		unsigned long framesPerBuffer,
-		const PaStreamCallbackTimeInfo* timeInfo,
-		PaStreamCallbackFlags statusFlags,
-		void *userData)
-{
-	(void) outputBuffer;
-	(void) timeInfo;
-	(void) statusFlags;
-	if(inputBuffer == nullptr) return paContinue;
-	SampleQueue* queue = reinterpret_cast<SampleQueue*>(userData);
-	const short* buffer = reinterpret_cast<const short*>(inputBuffer);
-	for(size_t i=0;i<framesPerBuffer;++i){
-		queue->push(buffer[i]);
-	}
-	if(interrupt_flag_ == 0){
-		return paContinue;
-	}else{
-		queue->push(0);    // The simplest implementation to declare queue end.
-		return paComplete; // Ctrl+C to stop recording
-	}
+        const void *inputBuffer,
+        void *outputBuffer,
+        unsigned long framesPerBuffer,
+        const PaStreamCallbackTimeInfo *timeInfo,
+        PaStreamCallbackFlags statusFlags,
+        void *userData) {
+    (void) outputBuffer;
+    (void) timeInfo;
+    (void) statusFlags;
+    if (inputBuffer == nullptr) return paContinue;
+    SampleQueue *queue = reinterpret_cast<SampleQueue *>(userData);
+    const short *buffer = reinterpret_cast<const short *>(inputBuffer);
+    for (size_t i = 0; i < framesPerBuffer; ++i) {
+        queue->push(buffer[i]);
+    }
+    if (interrupt_flag_ == 0) {
+        return paContinue;
+    } else {
+        queue->push(0);    // The simplest implementation to declare queue end.
+        return paComplete; // Ctrl+C to stop recording
+    }
 
 }
 
@@ -104,29 +104,28 @@ static int recordCallback(
  * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
  * @param [in,out] userdata 任意のユーザー定義データ
  */
-void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, void* userdata)
-{
-	size_t chunk_size = 3200; //bytes. 3.2 kb for 1.6 ksamples which is correspond to 100 msec at 16 kHz sampling rate.
-	std::chrono::milliseconds timeout(1000); // queue timeout
-	SampleQueue* queue = static_cast<SampleQueue*>(userdata);
-	int length = 0;
-	std::vector<short> tmp;
-	for(size_t i=0;i<chunk_size;i+=2){
-		short sample = 0;
-		if(queue->pop(sample, timeout)){
-			tmp.push_back(sample);
-		    length += 2;
-		}else{
-			*txfunc_error = -100; // Timeout for pop from queue.
-			break;
-		}
-		if(interrupt_flag_ != 0 && sample == 0){
-			*recog_break = true;
-			break;
-		}
-	}
-	*len = length;
-	std::memcpy(buffer, &tmp[0], tmp.size()*2);
+void txfunc(char *buffer, size_t *len, bool *recog_break, int *txfunc_error, void *userdata) {
+    size_t chunk_size = 3200; //bytes. 3.2 kb for 1.6 ksamples which is correspond to 100 msec at 16 kHz sampling rate.
+    std::chrono::milliseconds timeout(1000); // queue timeout
+    SampleQueue *queue = static_cast<SampleQueue *>(userdata);
+    int length = 0;
+    std::vector<short> tmp;
+    for (size_t i = 0; i < chunk_size; i += 2) {
+        short sample = 0;
+        if (queue->pop(sample, timeout)) {
+            tmp.push_back(sample);
+            length += 2;
+        } else {
+            *txfunc_error = -100; // Timeout for pop from queue.
+            break;
+        }
+        if (interrupt_flag_ != 0 && sample == 0) {
+            *recog_break = true;
+            break;
+        }
+    }
+    *len = length;
+    std::memcpy(buffer, &tmp[0], tmp.size() * 2);
 }
 
 /**
@@ -149,40 +148,36 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, voi
  * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
  * @param [in,out] userdata 任意のユーザー定義データ
  */
-void rxfunc(const char* result, size_t len, int* rxfunc_error, void *userdata)
-{
-	std::string s(result, len);
-	std::cout << s << std::endl;
+void rxfunc(const char *result, size_t len, int *rxfunc_error, void *userdata) {
+    std::string s(result, len);
+    std::cout << s << std::endl;
 }
 
 // 送信音声形式をコマンドライン引数から指定するための実装例
-struct AFENTRY
-{
+struct AFENTRY {
     char const *name;
     MIMIIO_AUDIO_FORMAT af;
 };
 
 constexpr AFENTRY afmap[] =
-{
-    {"MIMIIO_RAW_PCM", MIMIIO_RAW_PCM},
-    {"MIMIIO_FLAC_0", MIMIIO_FLAC_0},
-    {"MIMIIO_FLAC_1", MIMIIO_FLAC_1},
-    {"MIMIIO_FLAC_2", MIMIIO_FLAC_2},
-    {"MIMIIO_FLAC_3", MIMIIO_FLAC_3},
-    {"MIMIIO_FLAC_4", MIMIIO_FLAC_4},
-    {"MIMIIO_FLAC_5", MIMIIO_FLAC_5},
-    {"MIMIIO_FLAC_6", MIMIIO_FLAC_6},
-    {"MIMIIO_FLAC_7", MIMIIO_FLAC_7},
-    {"MIMIIO_FLAC_8", MIMIIO_FLAC_8},
-    {"MIMIIO_FLAC_PASS_THROUGH", MIMIIO_FLAC_PASS_THROUGH}
-};
-
-constexpr auto afmap_size = sizeof(afmap) / sizeof(afmap[0]);
+        {
+                {"MIMIIO_RAW_PCM",           MIMIIO_RAW_PCM},
+                {"MIMIIO_FLAC_0",            MIMIIO_FLAC_0},
+                {"MIMIIO_FLAC_1",            MIMIIO_FLAC_1},
+                {"MIMIIO_FLAC_2",            MIMIIO_FLAC_2},
+                {"MIMIIO_FLAC_3",            MIMIIO_FLAC_3},
+                {"MIMIIO_FLAC_4",            MIMIIO_FLAC_4},
+                {"MIMIIO_FLAC_5",            MIMIIO_FLAC_5},
+                {"MIMIIO_FLAC_6",            MIMIIO_FLAC_6},
+                {"MIMIIO_FLAC_7",            MIMIIO_FLAC_7},
+                {"MIMIIO_FLAC_8",            MIMIIO_FLAC_8},
+                {"MIMIIO_FLAC_PASS_THROUGH", MIMIIO_FLAC_PASS_THROUGH}
+        };
 
 bool parse_afstring(const std::string &afstring, MIMIIO_AUDIO_FORMAT *af) {
-    for (auto i = 0; i < afmap_size; ++i) {
-        if (afstring == afmap[i].name) {
-            *af = afmap[i].af;
+    for (const auto &aformat : afmap) {
+        if (afstring == aformat.name) {
+            *af = aformat.af;
             return true;
         }
     };
@@ -193,13 +188,12 @@ bool parse_afstring(const std::string &afstring, MIMIIO_AUDIO_FORMAT *af) {
  * @brief main function
  * @return exit code
  */
-int main(int argc, char** argv)
-{
-	if(signal(SIGINT, sig_handler_) == SIG_ERR){
-		return 1;
-	}
+int main(int argc, char **argv) {
+    if (signal(SIGINT, sig_handler_) == SIG_ERR) {
+        return 1;
+    }
 
-	// Parsing command-line arguments
+    // Parsing command-line arguments
     cmdline::parser p;
     {
         // mandatory
@@ -211,16 +205,16 @@ int main(int argc, char** argv)
         p.add<int>("channel", '\0', "Number of channels", false, 1);
         p.add<std::string>("format", '\0', "Audio format", false, "MIMIIO_RAW_PCM");
         p.add<std::string>("input_language", 'l', "input language", false, "ja");
-        p.add<std::string>("output_language", 'L', "output language", false, "ja");
         p.add<std::string>("process", 'x', "x-mimi-process", false, "asr");
+        p.add<std::string>("lid_options", '\0', "language identifier options", false, "lang=ja|en|zh|ko");
         p.add("verbose", '\0', "Verbose mode");
         p.add("help", '\0', "Show help");
         if (!p.parse(argc, argv)) {
             std::cout << p.error_full() << std::endl;
             std::cout << p.usage() << std::endl;
             std::cout << "Acceptable audio formats:" << std::endl;
-            for (auto i = 0; i < afmap_size; ++i) {
-                std::cout << "    " << afmap[i].name << std::endl;
+            for (const auto &aformat : afmap) {
+                std::cout << "    " << aformat.name << std::endl;
             };
             return 0;
         }
@@ -239,54 +233,55 @@ int main(int argc, char** argv)
         return 1;
     }
 
-	BlockingQueue<short> queue;
+    BlockingQueue<short> queue;
 
-	// Initialize audio device with portaudio
-	PaError paerror = Pa_Initialize();
-	if(paerror != paNoError){
-		Pa_Terminate();
-		std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
-		return 1;
-	}
-	if(p.exist("verbose")){
-		std::cerr << "Audio devices is successfully initialized." << std::endl;
-	}
+    // Initialize audio device with portaudio
+    PaError paerror = Pa_Initialize();
+    if (paerror != paNoError) {
+        Pa_Terminate();
+        std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
+        return 1;
+    }
+    if (p.exist("verbose")) {
+        std::cerr << "Audio devices is successfully initialized." << std::endl;
+    }
 
-	// Prepare portaudio stream parameters
-	PaStreamParameters inputParams;
-	inputParams.device = Pa_GetDefaultInputDevice();
-	if(inputParams.device == paNoDevice){
-		Pa_Terminate();
-		std::cerr << "No default input device\n";
-		return 1;
-	}
-	inputParams.channelCount = 1;
-	inputParams.sampleFormat = paInt16;
-	inputParams.suggestedLatency = Pa_GetDeviceInfo(inputParams.device)->defaultLowInputLatency;
-	inputParams.hostApiSpecificStreamInfo = nullptr;
+    // Prepare portaudio stream parameters
+    PaStreamParameters inputParams;
+    inputParams.device = Pa_GetDefaultInputDevice();
+    if (inputParams.device == paNoDevice) {
+        Pa_Terminate();
+        std::cerr << "No default input device\n";
+        return 1;
+    }
+    inputParams.channelCount = 1;
+    inputParams.sampleFormat = paInt16;
+    inputParams.suggestedLatency = Pa_GetDeviceInfo(inputParams.device)->defaultLowInputLatency;
+    inputParams.hostApiSpecificStreamInfo = nullptr;
 
-	// Open portaudio stream
-	PaStream* stream;
-	paerror = Pa_OpenStream(&stream, &inputParams, nullptr, p.get<int>("rate"), 1024, paClipOff, recordCallback, static_cast<void*>(&queue));
-	if(paerror != paNoError){
-		Pa_Terminate();
-		std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
-		return 1;
-	}
-	if(p.exist("verbose")){
-		std::cerr << "Portaudio recording stream is successfully opened." << std::endl;
-	}
+    // Open portaudio stream
+    PaStream *stream;
+    paerror = Pa_OpenStream(&stream, &inputParams, nullptr, p.get<int>("rate"), 1024, paClipOff, recordCallback,
+                            static_cast<void *>(&queue));
+    if (paerror != paNoError) {
+        Pa_Terminate();
+        std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
+        return 1;
+    }
+    if (p.exist("verbose")) {
+        std::cerr << "Portaudio recording stream is successfully opened." << std::endl;
+    }
 
-	// Start recording from microphone with portaudio
-	paerror = Pa_StartStream(stream);
-	if(paerror != paNoError){
-		Pa_Terminate();
-		std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
-		return 1;
-	}
-	if(p.exist("verbose")){
-		std::cerr << "Recording starts." << std::endl;
-	}
+    // Start recording from microphone with portaudio
+    paerror = Pa_StartStream(stream);
+    if (paerror != paNoError) {
+        Pa_Terminate();
+        std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
+        return 1;
+    }
+    if (p.exist("verbose")) {
+        std::cerr << "Recording starts." << std::endl;
+    }
 
     std::string mimi_process;
     mimi_process = p.get<std::string>("process");
@@ -294,8 +289,8 @@ int main(int argc, char** argv)
     std::string input_lang;
     input_lang = p.get<std::string>("input_language");
 
-    std::string output_lang;
-    output_lang = p.get<std::string>("output_language");
+    std::string lid_options;
+    lid_options = p.get<std::string>("lid_options");
 
     // Prepare mimi runtime configuration
     size_t header_size = 3;
@@ -304,69 +299,71 @@ int main(int argc, char** argv)
     strcpy(h[0].value, mimi_process.c_str());
     strcpy(h[1].key, "x-mimi-input-language");
     strcpy(h[1].value, input_lang.c_str());
-    strcpy(h[2].key, "x-mimi-output-language");
-    strcpy(h[2].value, output_lang.c_str());
+    strcpy(h[2].key, "x-mimi-lid-options");
+    strcpy(h[2].value, lid_options.c_str());
 
 
-	// Open mimi stream
-	int errorno = 0;
-	MIMI_IO *mio = mimi_open(
-	        p.get<std::string>("host").c_str(), p.get<int>("port"), txfunc, rxfunc,
-			static_cast<void*>(&queue), static_cast<void*>(&queue), af, p.get<int>("rate"), p.get<int>("channel"), h,
-	        header_size, access_token, MIMIIO_LOG_DEBUG, &errorno);
+    // Open mimi stream
+    int errorno = 0;
+    MIMI_IO *mio = mimi_open(
+            p.get<std::string>("host").c_str(), p.get<int>("port"), txfunc, rxfunc,
+            static_cast<void *>(&queue), static_cast<void *>(&queue), af, p.get<int>("rate"), p.get<int>("channel"), h,
+            header_size, access_token, MIMIIO_LOG_DEBUG, &errorno);
 
-	if(mio == NULL){
-		std::cerr << "Could not initialize mimi(R) service. mimi_open() failed: " << mimi_strerror(errorno) << " (" << errorno << ")"<< "\n";
-		paerror = Pa_CloseStream(stream);
-		if(paerror != paNoError){
-			Pa_Terminate();
-			std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
-		}
-		return 1;
-	}
+    if (mio == NULL) {
+        std::cerr << "Could not initialize mimi(R) service. mimi_open() failed: " << mimi_strerror(errorno) << " ("
+                  << errorno << ")" << "\n";
+        paerror = Pa_CloseStream(stream);
+        if (paerror != paNoError) {
+            Pa_Terminate();
+            std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
+        }
+        return 1;
+    }
     if (p.exist("verbose")) {
-    	std::cerr << "mimi connection is successfully opened." << std::endl;
+        std::cerr << "mimi connection is successfully opened." << std::endl;
     }
 
-	//Start mimi(R) stream
-	errorno = mimi_start(mio);
-	if(errorno != 0){
-		std::cerr << "Could not start mimi(R) service. mimi_start() filed. See syslog in detail.\n";
-		mimi_close(mio);
-		paerror = Pa_CloseStream(stream);
-		if(paerror != paNoError){
-			Pa_Terminate();
-			std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")" << std::endl;
-		}
-		return 1;
-	}
+    //Start mimi(R) stream
+    errorno = mimi_start(mio);
+    if (errorno != 0) {
+        std::cerr << "Could not start mimi(R) service. mimi_start() filed. See syslog in detail.\n";
+        mimi_close(mio);
+        paerror = Pa_CloseStream(stream);
+        if (paerror != paNoError) {
+            Pa_Terminate();
+            std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")" << std::endl;
+        }
+        return 1;
+    }
     if (p.exist("verbose")) {
         std::cerr << "Full duplex stream is started." << std::endl;
     }
 
-	//Wait main thread.
-	while((paerror = Pa_IsStreamActive(stream)) == 1 && mimi_is_active(mio)){
-		Pa_Sleep(500);
-	}
+    //Wait main thread.
+    while ((paerror = Pa_IsStreamActive(stream)) == 1 && mimi_is_active(mio)) {
+        Pa_Sleep(500);
+    }
 
-	//Close streams and check error state.
-	paerror = Pa_CloseStream(stream);
-	errorno = mimi_error(mio);
-	if(paerror != paNoError){
-		Pa_Terminate();
-		std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
-		mimi_close(mio);
-		return 1;
-	}
-	if(errorno == -100){ // user defined.
-		std::cerr << "[ERROR] Timed out for popping from queue." << std::endl;
-		mimi_close(mio);
-		return 2;
-	}else if(errorno > 0){ //libmimiio internal error code
-		std::cerr << "An error occurred while communicating mimi(R) service: " << mimi_strerror(errorno) << "(" << errorno << ")" << std::endl;
-		mimi_close(mio);
-		return 2;
-	}
-	mimi_close(mio);
-	return 0;
+    //Close streams and check error state.
+    paerror = Pa_CloseStream(stream);
+    errorno = mimi_error(mio);
+    if (paerror != paNoError) {
+        Pa_Terminate();
+        std::cerr << "Portaudio error: " << Pa_GetErrorText(paerror) << "(" << paerror << ")\n";
+        mimi_close(mio);
+        return 1;
+    }
+    if (errorno == -100) { // user defined.
+        std::cerr << "[ERROR] Timed out for popping from queue." << std::endl;
+        mimi_close(mio);
+        return 2;
+    } else if (errorno > 0) { //libmimiio internal error code
+        std::cerr << "An error occurred while communicating mimi(R) service: " << mimi_strerror(errorno) << "("
+                  << errorno << ")" << std::endl;
+        mimi_close(mio);
+        return 2;
+    }
+    mimi_close(mio);
+    return 0;
 }

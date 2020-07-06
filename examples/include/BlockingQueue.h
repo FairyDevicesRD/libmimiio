@@ -47,16 +47,14 @@
  * @attention データ型を short 型などサンプル単位にした場合、ロック取得が高コストであるため push/pop が高頻度に発生するようなスループットの高い利用には向かない。
  * そのような場合は、キューに出し入れする単位を std::array<short> などより大きな単位とするか、ロックフリーキューを使うことを検討する
  */
-template <class T, class Container = std::deque<T>>
-class BlockingQueue
-{
+template<class T, class Container = std::deque<T>>
+class BlockingQueue {
 public:
-	/**
-	 * @brief Push to queue
-	 * @param [in] value A value to be pushed.
-	 */
-    void push(T const& value)
-    {
+    /**
+     * @brief Push to queue
+     * @param [in] value A value to be pushed.
+     */
+    void push(T const &value) {
         {
             std::unique_lock<std::mutex> lock(mutex_);
             queue_.push_front(value);
@@ -70,12 +68,11 @@ public:
      * @param [in] timeout Timeout for pop
      * @return True if successfully popped, false if timed out.
      */
-    bool pop(T& value, std::chrono::milliseconds timeout)
-    {
+    bool pop(T &value, std::chrono::milliseconds timeout) {
         std::unique_lock<std::mutex> lock(mutex_);
-    	if (!condition_.wait_for(lock, timeout, [=]{ return !queue_.empty(); })) {
-    		return false;
-    	}
+        if (!condition_.wait_for(lock, timeout, [=] { return !queue_.empty(); })) {
+            return false;
+        }
         value = queue_.back();
         queue_.pop_back();
         return true;
@@ -86,10 +83,9 @@ public:
      * @param [out] value A value popped from the queue
      * @return True if successfully popped, false if timed out.
      */
-    void pop(T& value)
-    {
+    void pop(T &value) {
         std::unique_lock<std::mutex> lock(mutex_);
-    	condition_.wait(lock, [=]{ return !queue_.empty(); });
+        condition_.wait(lock, [=] { return !queue_.empty(); });
         value = queue_.back();
         queue_.pop_back();
     }

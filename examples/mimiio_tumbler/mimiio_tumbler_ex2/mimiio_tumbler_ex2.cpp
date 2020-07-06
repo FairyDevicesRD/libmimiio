@@ -40,17 +40,19 @@
 #include <syslog.h>
 
 volatile sig_atomic_t interrupt_flag_ = 0;
-void sig_handler_(int signum){ interrupt_flag_ = 1; }
+
+void sig_handler_(int signum) { interrupt_flag_ = 1; }
 
 /**
  * @class StreamData
  * @brief User defined data for txfunc
  */
-class StreamData{
+class StreamData {
 public:
-	StreamData() : recog_break_(false) {}
-	SampleQueue queue_;
-	std::atomic<bool> recog_break_;
+    StreamData() : recog_break_(false) {}
+
+    SampleQueue queue_;
+    std::atomic<bool> recog_break_;
 };
 
 /**
@@ -77,26 +79,25 @@ public:
  * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
  * @param [in,out] userdata 任意のユーザー定義データ
  */
-void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, void* userdata)
-{
-	std::chrono::milliseconds timeout(1000); // queue timeout
-	StreamData* sdata = static_cast<StreamData*>(userdata);
-	*recog_break = sdata->recog_break_.load();
-	auto current_queue_size = sdata->queue_.size();
-	int length = 0;
-	std::vector<short> tmp;
-	for(auto i=0;i<current_queue_size;++i){
-		short sample = 0;
-		if(sdata->queue_.pop(sample, timeout)){
-			tmp.push_back(sample);
-		    length += 2;
-		}else{
-			*txfunc_error = -100; // Timeout for pop from queue.
-			break;
-		}
-	}
-	*len = length;
-	std::memcpy(buffer, &tmp[0], tmp.size()*2);
+void txfunc(char *buffer, size_t *len, bool *recog_break, int *txfunc_error, void *userdata) {
+    std::chrono::milliseconds timeout(1000); // queue timeout
+    StreamData *sdata = static_cast<StreamData *>(userdata);
+    *recog_break = sdata->recog_break_.load();
+    auto current_queue_size = sdata->queue_.size();
+    int length = 0;
+    std::vector<short> tmp;
+    for (auto i = 0; i < current_queue_size; ++i) {
+        short sample = 0;
+        if (sdata->queue_.pop(sample, timeout)) {
+            tmp.push_back(sample);
+            length += 2;
+        } else {
+            *txfunc_error = -100; // Timeout for pop from queue.
+            break;
+        }
+    }
+    *len = length;
+    std::memcpy(buffer, &tmp[0], tmp.size() * 2);
 }
 
 /**
@@ -119,124 +120,122 @@ void txfunc(char *buffer, size_t *len, bool *recog_break, int* txfunc_error, voi
  * libmimiio の内部エラーコードを重複しないように、マイナスの値を利用することを推奨する。
  * @param [in,out] userdata 任意のユーザー定義データ
  */
-void rxfunc(const char* result, size_t len, int* rxfunc_error, void *userdata)
-{
-	std::string s(result, len);
-	std::cout << s << std::endl;
+void rxfunc(const char *result, size_t len, int *rxfunc_error, void *userdata) {
+    std::string s(result, len);
+    std::cout << s << std::endl;
 }
 
 /**
  * @class Session
  * @brief ひとつの発話に対応する音声データ、リモートホストへの接続等の一式を管理する
  */
-class Session
-{
+class Session {
 public:
-	class ConnectionParam
-	{
-	public:
-		ConnectionParam(
-				const std::string& host, int port, const char* token,
-				int rate, int channel, MIMIIO_AUDIO_FORMAT af, bool verbose) :
-					host_(host), port_(port), token_(token), rate_(rate), channel_(channel), af_(af), verbose_(verbose) {}
-		const std::string host_;
-		const int port_;
-		const char* token_;
-		int rate_;
-		int channel_;
-		bool verbose_;
-		MIMIIO_AUDIO_FORMAT af_;
-		std::vector<MIMIIO_HTTP_REQUEST_HEADER> header_;
-	};
+    class ConnectionParam {
+    public:
+        ConnectionParam(
+                const std::string &host, int port, const char *token,
+                int rate, int channel, MIMIIO_AUDIO_FORMAT af, bool verbose) :
+                host_(host), port_(port), token_(token), rate_(rate), channel_(channel), af_(af), verbose_(verbose) {}
 
-	Session(const ConnectionParam& param) : param_(param){}
-	~Session(){ if(mio_ != nullptr) mimi_close(mio_); }
+        const std::string host_;
+        const int port_;
+        const char *token_;
+        int rate_;
+        int channel_;
+        bool verbose_;
+        MIMIIO_AUDIO_FORMAT af_;
+        std::vector<MIMIIO_HTTP_REQUEST_HEADER> header_;
+    };
 
-	/**
-	 * @brief Open stream to remote host.
-	 * @return true if successfully opened the stream.
-	 */
-	bool open()
-	{
-		if(mio_ != nullptr){
-			close();
-		}
-		int retry = 0;
-		while(retry++ < mimi_open_retry_){
-			int errorno = 0;
-			mio_ = mimi_open(
-					param_.host_.c_str(), param_.port_, txfunc, rxfunc,
-					static_cast<void*>(&sdata_), static_cast<void*>(nullptr), param_.af_, param_.rate_, param_.channel_,
-					param_.header_.data(), param_.header_.size(), param_.token_, MIMIIO_LOG_DEBUG, &errorno);
-			if(mio_ == nullptr){
-				std::cerr << "Could not open mimi(R) API service. mimi_open() failed: "
-						<< mimi_strerror(errorno) << " (" << errorno << "), retry = " << retry << std::endl;
-			}else{
-				if(param_.verbose_){
-					 std::cerr << "mimi connection is successfully opened." << std::endl;
-				}
-				return true;
-			}
-		}
-		// 接続が複数回失敗した場合は失敗とする
-		return false;
-	}
+    Session(const ConnectionParam &param) : param_(param) {}
 
-	/**
-	 * @brief Start the stream to remote host.
-	 * @return true if successfully start the stream.
-	 */
-	bool start()
-	{
-		 int errorno = mimi_start(mio_);
-		 if(errorno != 0){
-			 std::cerr << "Could not start mimi(R) service. mimi_start() filed. See syslog in detail.\n";
-			 mimi_close(mio_);
-			 return false;
-		 }
-		 if (param_.verbose_) {
-			 std::cerr << "mimi connection is successfully started, decoding starts..." << std::endl;
-		 }
-		 return true;
-	}
+    ~Session() { if (mio_ != nullptr) mimi_close(mio_); }
 
-	void close()
-	{
-		while(mimi_is_active(mio_)){
-			usleep(1000000);
-		}
-		int errorno = mimi_error(mio_);
-		if(errorno == -100){ // user defined.
-			std::cerr << "An error occurred in mimii_tumbler_ex2, timed out for pop from queue." << std::endl;
-		}else if(errorno > 0){ //libmimiio internal error code
-			std::cerr << "An error occurred in mimiio: " << mimi_strerror(errorno) << "(" << errorno << ")" << std::endl;
-		}
-		mimi_close(mio_);
-		if (param_.verbose_) {
-			std::cerr << "mimi connection is closed." << std::endl;
-		}
-		mio_ = nullptr;
-		sdata_.recog_break_.store(false);
-	}
+    /**
+     * @brief Open stream to remote host.
+     * @return true if successfully opened the stream.
+     */
+    bool open() {
+        if (mio_ != nullptr) {
+            close();
+        }
+        int retry = 0;
+        while (retry++ < mimi_open_retry_) {
+            int errorno = 0;
+            mio_ = mimi_open(
+                    param_.host_.c_str(), param_.port_, txfunc, rxfunc,
+                    static_cast<void *>(&sdata_), static_cast<void *>(nullptr), param_.af_, param_.rate_,
+                    param_.channel_,
+                    param_.header_.data(), param_.header_.size(), param_.token_, MIMIIO_LOG_DEBUG, &errorno);
+            if (mio_ == nullptr) {
+                std::cerr << "Could not open mimi(R) API service. mimi_open() failed: "
+                          << mimi_strerror(errorno) << " (" << errorno << "), retry = " << retry << std::endl;
+            } else {
+                if (param_.verbose_) {
+                    std::cerr << "mimi connection is successfully opened." << std::endl;
+                }
+                return true;
+            }
+        }
+        // 接続が複数回失敗した場合は失敗とする
+        return false;
+    }
 
-	/**
-	 * @brief Send recog-break
-	 */
-	void recogBreak(){
-		sdata_.recog_break_.store(true);
-	}
+    /**
+     * @brief Start the stream to remote host.
+     * @return true if successfully start the stream.
+     */
+    bool start() {
+        int errorno = mimi_start(mio_);
+        if (errorno != 0) {
+            std::cerr << "Could not start mimi(R) service. mimi_start() filed. See syslog in detail.\n";
+            mimi_close(mio_);
+            return false;
+        }
+        if (param_.verbose_) {
+            std::cerr << "mimi connection is successfully started, decoding starts..." << std::endl;
+        }
+        return true;
+    }
 
-	/**
-	 * @brief Add single audio sample to queue
-	 * @param [in] sample Single audio sample
-	 */
-	void addAudioData(const short& sample) { sdata_.queue_.push(sample); }
+    void close() {
+        while (mimi_is_active(mio_)) {
+            usleep(1000000);
+        }
+        int errorno = mimi_error(mio_);
+        if (errorno == -100) { // user defined.
+            std::cerr << "An error occurred in mimii_tumbler_ex2, timed out for pop from queue." << std::endl;
+        } else if (errorno > 0) { //libmimiio internal error code
+            std::cerr << "An error occurred in mimiio: " << mimi_strerror(errorno) << "(" << errorno << ")"
+                      << std::endl;
+        }
+        mimi_close(mio_);
+        if (param_.verbose_) {
+            std::cerr << "mimi connection is closed." << std::endl;
+        }
+        mio_ = nullptr;
+        sdata_.recog_break_.store(false);
+    }
+
+    /**
+     * @brief Send recog-break
+     */
+    void recogBreak() {
+        sdata_.recog_break_.store(true);
+    }
+
+    /**
+     * @brief Add single audio sample to queue
+     * @param [in] sample Single audio sample
+     */
+    void addAudioData(const short &sample) { sdata_.queue_.push(sample); }
 
 private:
-	const ConnectionParam& param_;
-	MIMI_IO *mio_ = nullptr;
-	StreamData sdata_;
-	const int mimi_open_retry_ = 3;
+    const ConnectionParam &param_;
+    MIMI_IO *mio_ = nullptr;
+    StreamData sdata_;
+    const int mimi_open_retry_ = 3;
 };
 
 /**
@@ -246,54 +245,51 @@ private:
  * @brief libmimixfe 録音コールバック関数、引数の意味など詳細は libmimixfe ドキュメントを参照してください
  */
 void recorderCallback(
-		short* buffer,
-		size_t buflen,
-		mimixfe::SpeechState state,
-		int sourceId,
-		mimixfe::StreamInfo* info,
-		size_t infolen,
-		void* userdata
-){
-	Session* session = reinterpret_cast<Session*>(userdata);
-	for(size_t i=0;i<buflen;++i){
-		session->addAudioData(buffer[i]);
-	}
-	if(state == mimixfe::SpeechState::SpeechStart){
-		session->open();
-		session->start();
-	}else if(state == mimixfe::SpeechState::SpeechEnd){
-		session->recogBreak();
-	}
+        short *buffer,
+        size_t buflen,
+        mimixfe::SpeechState state,
+        int sourceId,
+        mimixfe::StreamInfo *info,
+        size_t infolen,
+        void *userdata
+) {
+    Session *session = reinterpret_cast<Session *>(userdata);
+    for (size_t i = 0; i < buflen; ++i) {
+        session->addAudioData(buffer[i]);
+    }
+    if (state == mimixfe::SpeechState::SpeechStart) {
+        session->open();
+        session->start();
+    } else if (state == mimixfe::SpeechState::SpeechEnd) {
+        session->recogBreak();
+    }
 }
 
 // 送信音声形式をコマンドライン引数から指定するための実装例
-struct AFENTRY
-{
+struct AFENTRY {
     char const *name;
     MIMIIO_AUDIO_FORMAT af;
 };
 
 constexpr AFENTRY afmap[] =
-{
-    {"MIMIIO_RAW_PCM", MIMIIO_RAW_PCM},
-    {"MIMIIO_FLAC_0", MIMIIO_FLAC_0},
-    {"MIMIIO_FLAC_1", MIMIIO_FLAC_1},
-    {"MIMIIO_FLAC_2", MIMIIO_FLAC_2},
-    {"MIMIIO_FLAC_3", MIMIIO_FLAC_3},
-    {"MIMIIO_FLAC_4", MIMIIO_FLAC_4},
-    {"MIMIIO_FLAC_5", MIMIIO_FLAC_5},
-    {"MIMIIO_FLAC_6", MIMIIO_FLAC_6},
-    {"MIMIIO_FLAC_7", MIMIIO_FLAC_7},
-    {"MIMIIO_FLAC_8", MIMIIO_FLAC_8},
-    {"MIMIIO_FLAC_PASS_THROUGH", MIMIIO_FLAC_PASS_THROUGH}
-};
-
-constexpr auto afmap_size = sizeof(afmap) / sizeof(afmap[0]);
+        {
+                {"MIMIIO_RAW_PCM",           MIMIIO_RAW_PCM},
+                {"MIMIIO_FLAC_0",            MIMIIO_FLAC_0},
+                {"MIMIIO_FLAC_1",            MIMIIO_FLAC_1},
+                {"MIMIIO_FLAC_2",            MIMIIO_FLAC_2},
+                {"MIMIIO_FLAC_3",            MIMIIO_FLAC_3},
+                {"MIMIIO_FLAC_4",            MIMIIO_FLAC_4},
+                {"MIMIIO_FLAC_5",            MIMIIO_FLAC_5},
+                {"MIMIIO_FLAC_6",            MIMIIO_FLAC_6},
+                {"MIMIIO_FLAC_7",            MIMIIO_FLAC_7},
+                {"MIMIIO_FLAC_8",            MIMIIO_FLAC_8},
+                {"MIMIIO_FLAC_PASS_THROUGH", MIMIIO_FLAC_PASS_THROUGH}
+        };
 
 bool parse_afstring(const std::string &afstring, MIMIIO_AUDIO_FORMAT *af) {
-    for (auto i = 0; i < afmap_size; ++i) {
-        if (afstring == afmap[i].name) {
-            *af = afmap[i].af;
+    for (const auto &aformat : afmap) {
+        if (afstring == aformat.name) {
+            *af = aformat.af;
             return true;
         }
     };
@@ -304,9 +300,8 @@ bool parse_afstring(const std::string &afstring, MIMIIO_AUDIO_FORMAT *af) {
  * @brief main function
  * @return exit code
  */
-int main(int argc, char** argv)
-{
-	// Parsing command-line arguments
+int main(int argc, char **argv) {
+    // Parsing command-line arguments
     cmdline::parser p;
     {
         // mandatory
@@ -317,16 +312,17 @@ int main(int argc, char** argv)
         p.add<int>("rate", '\0', "Sampling rate", false, 16000);
         p.add<int>("channel", '\0', "Number of channels", false, 1);
         p.add<std::string>("format", '\0', "Audio format", false, "MIMIIO_RAW_PCM");
-        p.add<std::string>("lang",'\0',"Language code", false, "ja");
-        p.add<std::string>("services",'\0',"mimi services", false, "asr");
+        p.add<std::string>("lang", '\0', "Language code", false, "ja");
+        p.add<std::string>("lid_options", '\0', "language identifier options", false, "lang=ja|en|zh|ko");
+        p.add<std::string>("services", '\0', "mimi services", false, "asr");
         p.add("verbose", '\0', "Verbose mode");
         p.add("help", '\0', "Show help");
         if (!p.parse(argc, argv)) {
             std::cout << p.error_full() << std::endl;
             std::cout << p.usage() << std::endl;
             std::cout << "Acceptable audio formats:" << std::endl;
-            for (auto i = 0; i < afmap_size; ++i) {
-                std::cout << "    " << afmap[i].name << std::endl;
+            for (const auto &aformat : afmap) {
+                std::cout << "    " << aformat.name << std::endl;
             };
             return 0;
         }
@@ -344,73 +340,77 @@ int main(int argc, char** argv)
         return 1;
     }
 
-	try{
+    try {
 
-		// Initialize mimixfe
-	    Session::ConnectionParam param(p.get<std::string>("host"), p.get<int>("port"), access_token,
-	    		p.get<int>("rate"), p.get<int>("channel"), af, p.exist("verbose"));
+        // Initialize mimixfe
+        Session::ConnectionParam param(p.get<std::string>("host"), p.get<int>("port"), access_token,
+                                       p.get<int>("rate"), p.get<int>("channel"), af, p.exist("verbose"));
 
-	    std::vector<MIMIIO_HTTP_REQUEST_HEADER> hs;
-	    MIMIIO_HTTP_REQUEST_HEADER h;
-	    strcpy(h.key,"x-mimi-input-language");
-	    strcpy(h.value,p.get<std::string>("lang").c_str());
-	    hs.push_back(h);
-	    MIMIIO_HTTP_REQUEST_HEADER h1;
-	    strcpy(h1.key,"x-mimi-process");
-	    strcpy(h1.value,p.get<std::string>("services").c_str());
-	    hs.push_back(h1);
-	    param.header_ = hs;
+        std::vector<MIMIIO_HTTP_REQUEST_HEADER> hs;
+        MIMIIO_HTTP_REQUEST_HEADER h;
+        strcpy(h.key, "x-mimi-input-language");
+        strcpy(h.value, p.get<std::string>("lang").c_str());
+        hs.push_back(h);
+        MIMIIO_HTTP_REQUEST_HEADER h1;
+        strcpy(h1.key, "x-mimi-process");
+        strcpy(h1.value, p.get<std::string>("services").c_str());
+        hs.push_back(h1);
+        MIMIIO_HTTP_REQUEST_HEADER h2;
+        strcpy(h2.key, "x-mimi-lid-options");
+        strcpy(h2.value, p.get<std::string>("lid_options").c_str());
+        hs.push_back(h2);
+        param.header_ = hs;
 
-	    Session session(param);
-	    int xfe_errorno = 0;
-	    mimixfe::XFESourceConfig s;
-	    mimixfe::XFEECConfig e;
-	    mimixfe::XFEVADConfig v;
-	    v.timeToInactive_  = 600;
-	    v.tailPaddingTime_ = 400;
-	    mimixfe::XFEBeamformerConfig b;
-	    mimixfe::XFEStaticLocalizerConfig c({mimixfe::Direction(270, 90)});
-		mimixfe::XFEOutputConfig o;
-	    mimixfe::XFERecorder rec(s,e,v,b,c,o,recorderCallback,reinterpret_cast<void*>(&session));
-	    rec.setLogLevel(LOG_UPTO(LOG_DEBUG));
-	    if(signal(SIGINT, sig_handler_) == SIG_ERR){
-	    	return 1;
-		}
-	    if(p.exist("verbose")){
-	    	std::cerr << "XFE recording stream is successfully initialized." << std::endl;
-		}
-	    // Recording start
-	    rec.start();
-	    if (p.exist("verbose")) {
-	    	std::cerr << "XFE recording stream is successfully started." << std::endl;
-	    	std::cerr << "[[ YOU CAN SPEAK NOW ]]" << std::endl;
-		}
+        Session session(param);
+        int xfe_errorno = 0;
+        mimixfe::XFESourceConfig s;
+        mimixfe::XFEECConfig e;
+        mimixfe::XFEVADConfig v;
+        v.timeToInactive_ = 600;
+        v.tailPaddingTime_ = 400;
+        mimixfe::XFEBeamformerConfig b;
+        mimixfe::XFEStaticLocalizerConfig c({mimixfe::Direction(270, 90)});
+        mimixfe::XFEOutputConfig o;
+        mimixfe::XFERecorder rec(s, e, v, b, c, o, recorderCallback, reinterpret_cast<void *>(&session));
+        rec.setLogLevel(LOG_UPTO(LOG_DEBUG));
+        if (signal(SIGINT, sig_handler_) == SIG_ERR) {
+            return 1;
+        }
+        if (p.exist("verbose")) {
+            std::cerr << "XFE recording stream is successfully initialized." << std::endl;
+        }
+        // Recording start
+        rec.start();
+        if (p.exist("verbose")) {
+            std::cerr << "XFE recording stream is successfully started." << std::endl;
+            std::cerr << "[[ YOU CAN SPEAK NOW ]]" << std::endl;
+        }
 
-	    int usec = 100000; // 0.1sec, you should choose appropriate value
-	    while(rec.isActive()){
-			 if(interrupt_flag_ != 0){
-				 if (p.exist("verbose")) {
-					 std::cerr << "Stream is to be finished..." << std::endl;
-				 }
-				 rec.stop();
-				 session.close();
-			 }
-			 usleep(usec);
-		 }
-		 if(xfe_errorno != 0){
-			 std::cerr << "An error occurred in mimixfe (" << xfe_errorno << ")" << std::endl;
-		 }
+        int usec = 100000; // 0.1sec, you should choose appropriate value
+        while (rec.isActive()) {
+            if (interrupt_flag_ != 0) {
+                if (p.exist("verbose")) {
+                    std::cerr << "Stream is to be finished..." << std::endl;
+                }
+                rec.stop();
+                session.close();
+            }
+            usleep(usec);
+        }
+        if (xfe_errorno != 0) {
+            std::cerr << "An error occurred in mimixfe (" << xfe_errorno << ")" << std::endl;
+        }
 
-		 if (p.exist("verbose")) {
-			 std::cerr << "All resources are cleaned up." << std::endl;
-		 }
-		 return 0;
+        if (p.exist("verbose")) {
+            std::cerr << "All resources are cleaned up." << std::endl;
+        }
+        return 0;
 
-    }catch(const mimixfe::XFERecorderError& e){
-    	std::cerr << "XFE Recorder Exception: " << e.what() << "(" << e.errorno() << ")" << std::endl;
-		return 2;
-	 }catch(const std::exception& e){
-		std::cerr << "Exception: " << e.what() << std::endl;
-		return 2;
-	 }
+    } catch (const mimixfe::XFERecorderError &e) {
+        std::cerr << "XFE Recorder Exception: " << e.what() << "(" << e.errorno() << ")" << std::endl;
+        return 2;
+    } catch (const std::exception &e) {
+        std::cerr << "Exception: " << e.what() << std::endl;
+        return 2;
+    }
 }

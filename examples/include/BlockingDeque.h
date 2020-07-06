@@ -48,16 +48,14 @@
  * @tparam キューを実現するコンテナ型
  * @see See also BlockinQueue.h
  */
-template <class T, class Container = std::deque<T>>
-class BlockingDeque
-{
+template<class T, class Container = std::deque<T>>
+class BlockingDeque {
 public:
-	/**
-	 * @brief Blocking push_front() for std::deque<>
-	 * @param [in] value A value to be pushed.
-	 */
-    void push_front(T const& value)
-    {
+    /**
+     * @brief Blocking push_front() for std::deque<>
+     * @param [in] value A value to be pushed.
+     */
+    void push_front(T const &value) {
         {
             std::unique_lock<std::mutex> lock(mutex_);
             queue_.push_front(value);
@@ -65,36 +63,32 @@ public:
         condition_.notify_one();
     }
 
-    T& front()
-    {
-    	std::unique_lock<std::mutex> lock(mutex_);
-    	condition_.wait(lock, [&]{ return !queue_.empty(); });
-    	return queue_.front();
+    T &front() {
+        std::unique_lock<std::mutex> lock(mutex_);
+        condition_.wait(lock, [&] { return !queue_.empty(); });
+        return queue_.front();
     }
 
-    T& front(std::chrono::milliseconds timeout)
-    {
-    	std::unique_lock<std::mutex> lock(mutex_);
-    	if(!condition_.wait_for(lock, timeout, [=]{ return !queue_.empty(); })){
-    		throw std::runtime_error("queue.front() time out");
-    	}
-    	return queue_.front();
+    T &front(std::chrono::milliseconds timeout) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        if (!condition_.wait_for(lock, timeout, [=] { return !queue_.empty(); })) {
+            throw std::runtime_error("queue.front() time out");
+        }
+        return queue_.front();
     }
 
-    T& back()
-    {
-    	std::unique_lock<std::mutex> lock(mutex_);
-    	condition_.wait(lock, [&]{ return !queue_.empty(); });
-    	return queue_.back();
+    T &back() {
+        std::unique_lock<std::mutex> lock(mutex_);
+        condition_.wait(lock, [&] { return !queue_.empty(); });
+        return queue_.back();
     }
 
-    T& back(std::chrono::milliseconds timeout)
-    {
-    	std::unique_lock<std::mutex> lock(mutex_);
-    	if(!condition_.wait_for(lock, timeout, [=]{ return !queue_.empty(); })){
-    		throw std::runtime_error("queue.back() time out");
-    	}
-    	return queue_.back();
+    T &back(std::chrono::milliseconds timeout) {
+        std::unique_lock<std::mutex> lock(mutex_);
+        if (!condition_.wait_for(lock, timeout, [=] { return !queue_.empty(); })) {
+            throw std::runtime_error("queue.back() time out");
+        }
+        return queue_.back();
     }
 
     /**
@@ -103,10 +97,9 @@ public:
      * @param [in] timeout Timeout for pop
      * @return True if successfully popped, false if timed out.
      */
-    void pop_back(T& value)
-    {
+    void pop_back(T &value) {
         std::unique_lock<std::mutex> lock(mutex_);
-    	condition_.wait(lock, [&]{ return !queue_.empty(); });
+        condition_.wait(lock, [&] { return !queue_.empty(); });
         value = queue_.back();
         queue_.pop_back();
     }
@@ -117,12 +110,11 @@ public:
      * @param [in] timeout Timeout for pop
      * @return True if successfully popped, false if timed out.
      */
-    void pop_back(T& value, std::chrono::milliseconds timeout)
-    {
+    void pop_back(T &value, std::chrono::milliseconds timeout) {
         std::unique_lock<std::mutex> lock(mutex_);
-    	if (!condition_.wait_for(lock, timeout, [=]{ return !queue_.empty(); })) {
-    		throw std::runtime_error("queue.pop() time out");
-    	}
+        if (!condition_.wait_for(lock, timeout, [=] { return !queue_.empty(); })) {
+            throw std::runtime_error("queue.pop() time out");
+        }
         value = queue_.back();
         queue_.pop_back();
     }
@@ -133,17 +125,15 @@ public:
      */
     int size() const { return queue_.size(); }
 
-    const T& operator[](std::size_t i) const { return queue_.at(i); }
-    T& operator[](std::size_t i){ return queue_.at(i); }
+    const T &operator[](std::size_t i) const { return queue_.at(i); }
+
+    T &operator[](std::size_t i) { return queue_.at(i); }
 
 private:
     std::mutex mutex_;
     std::condition_variable condition_;
     Container queue_;
 };
-
-
-
 
 
 #endif /* EXAMPLES_INCLUDE_BLOCKINGDEQUE_H_ */
